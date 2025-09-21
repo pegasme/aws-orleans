@@ -1,11 +1,11 @@
 resource "aws_dynamodb_table" "adventure-dynamodb-table" {
     name           = "AdventureDb"
-    billing_mode   = "PAY_PER_REQUEST"
-    read_capacity  = 20
-    write_capacity = 20
+    billing_mode   = "PROVISIONED"
+    read_capacity  = 10
+    write_capacity = 10
     hash_key       = "PK"
     range_key      = "SK"
-    
+
     attribute {
         name = "PK"
         type = "S"
