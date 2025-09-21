@@ -5,7 +5,13 @@ module "vpc" {
 } 
 
 module dynamodb {
-    source = "./modules/dynaomodb"
+    source = "./modules/dynamodb"
     name   = "adventure"
     region = var.region
+}
+
+module gw {
+    source  = "./modules/gateway"
+    name    = "adventure"
+    vpc_id  = vpc.vpc_id
 }
