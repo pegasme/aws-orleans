@@ -1,0 +1,17 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="AWSECS.ContainerMetadata" Version="1.1.2" />
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.Orleans.Client" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.Orleans.Clustering.DynamoDB" Version="9.2.1" />
+    <PackageVersion Include="Microsoft.Orleans.OrleansAWSUtils" Version="2.4.5" />
+    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="9.0.1" />
+    <PackageVersion Include="Microsoft.Orleans.Server" Version="9.0.1" />
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+</Project>
