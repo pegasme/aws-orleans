@@ -1,5 +1,11 @@
 module "vpc" {
     source = "./modules/vpc"
-    name   = "orleans"
-    region = "us-east-1"
+    name   = "adventure"
+    region = var.region
 } 
+
+module dynamodb {
+    source = "./modules/dynaomodb"
+    name   = "adventure"
+    region = var.region
+}
