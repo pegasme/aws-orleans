@@ -8,7 +8,7 @@ terraform {
 
   cloud {
     hostname     = "app.terraform.io"
-    organization = "aws-infrastructure"
+    organization = "PegasTest"
 
     workspaces {
       name = "aws-orleans"
