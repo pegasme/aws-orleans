@@ -37,7 +37,7 @@ resource "aws_dynamodb_table" "adventure-dynamodb-table" {
         range_key          = "GSI1-SK"  
         write_capacity     = 10
         read_capacity      = 10
-        projection_type    = "INCLUDE"
+        projection_type    = "ALL"
     }
 
     tags = {
