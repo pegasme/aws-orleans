@@ -5,8 +5,7 @@ resource "aws_dynamodb_table" "adventure-dynamodb-table" {
     write_capacity = 20
     hash_key       = "PK"
     range_key      = "SK"
-    region         = var.region
-
+    
     attribute {
         name = "PK"
         type = "S"
