@@ -1,6 +1,6 @@
 variable "name" {
   type        = string
-  description = "A name to associate with the VPC and its resources."
+  description = "A name to associate with the dynamodb and its resources."
 }
 
 variable "region" {
