@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Orleans.Sdk"/>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AdventureGrainInterfaces\AdventureGrainInterfaces.csproj"/>
+  </ItemGroup>
+</Project>
