@@ -42,5 +42,5 @@ resource "aws_dynamodb_table" "adventure-dynamodb-table" {
 
     tags = {
         Name = var.name
-  }
+    }
 }
