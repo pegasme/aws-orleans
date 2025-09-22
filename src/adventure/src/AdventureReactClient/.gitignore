@@ -1,0 +1,15 @@
+node_modules/
+build/
+dist/
+.env
+.DS_Store
+npm-debug.log*
+yarn-error.log*
+coverage/
+public/
+.eslintcache
+*.local
+*.lock
+*.log
+.idea/
+.vscode/
