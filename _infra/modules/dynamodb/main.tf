@@ -4,6 +4,29 @@ resource "aws_dynamodb_table" "grain_store" {
     read_capacity  = 10
     write_capacity = 10
 
+    hash_key       = "GrainReference"
+    range_key      = "GrainType"
+
+    attribute {
+        name = "GrainReference"
+        type = "S"
+    }
+    
+    attribute {
+        name = "GrainType"
+        type = "S"
+    }
+
+    attribute {
+        name = "GrainState"
+        type = "S"
+    }
+
+    ttl {
+        attribute_name = "GrainTtl"
+        enabled        = true 
+    }
+
     tags = {
         Name = var.name
     }
@@ -14,6 +37,44 @@ resource "aws_dynamodb_table" "cluster_store" {
     billing_mode   = "PROVISIONED"
     read_capacity  = 10
     write_capacity = 10
+
+    hash_key       = "DeploymentId"
+    range_key      = "SiloIdentity"
+
+    attribute {
+        name = "DeploymentId"
+        type = "S"
+    }
+    
+    attribute {
+        name = "SiloIdentity"
+        type = "S"
+    }
+
+    attribute {
+        name = "SiloName"
+        type = "S"
+    }
+
+    attribute {
+        name = "Address"
+        type = "S"
+    }
+
+    attribute {
+        name = "VersionRow"
+        type = "S"
+    }
+
+    attribute {
+        name = "IAmAliveTime"
+        type = "S"
+    }
+
+    attribute {
+        name = "Port"
+        type = "S"
+    }
 
     tags = {
         Name = var.name
