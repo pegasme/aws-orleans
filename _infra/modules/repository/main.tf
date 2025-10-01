@@ -1,5 +1,5 @@
-resource "aws_ecr_repository" "this" {
-  name                 = "raven-repository"
+resource "aws_ecr_repository" "repo" {
+  name                 = var.name
   image_tag_mutability = "IMMUTABLE"
 
   image_scanning_configuration {
@@ -7,12 +7,8 @@ resource "aws_ecr_repository" "this" {
   }
 }
 
-data "aws_ecr_pull_through_cache_rule" "ecr_public" {
-  ecr_repository_prefix = aws_ecr_repository.this.name
-}
-
 resource "aws_ecr_lifecycle_policy" "raven_repo_policy" {
-  repository = aws_ecr_repository.this.name
+  repository = aws_ecr_repository.repo.name
 
   policy = jsonencode({
     rules = [
