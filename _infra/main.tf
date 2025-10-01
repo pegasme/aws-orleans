@@ -1,6 +1,7 @@
 locals {
   project_name = "adventure"
 }
+
 module "vpc" {
   source = "./modules/vpc"
   name   = local.project_name
@@ -17,4 +18,9 @@ module "gw" {
   source = "./modules/gateway"
   name   = local.project_name
   vpc_id = module.vpc.vpc_id
+}
+
+module "repository" {
+  source = "./modules/repository"
+  name   = "raven-repository"
 }

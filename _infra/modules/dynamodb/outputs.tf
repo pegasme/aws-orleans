@@ -1,4 +1,9 @@
-output "table_arn" {
-  value       = aws_dynamodb_table.adventure-dynamodb-table.arn
-  description = "DynamoDB ARN"
+output "grain_table_arn" {
+  value       = aws_dynamodb_table.grain_store.arn
+  description = "Grain DynamoDB ARN"
+}
+
+output "cluster_table_arn" {
+  value       = aws_dynamodb_table.cluster_store.arn
+  description = "Cluster DynamoDB ARN"
 }
