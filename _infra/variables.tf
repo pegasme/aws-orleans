@@ -10,8 +10,14 @@ variable "AWS_SECRET_ACCESS_KEY" {
   sensitive   = true # Good practice for secrets
 }
 
-variable "AWS_ACCESS_KEY_ID" {
-  description = "The AWS Access Key."
+variable "github_token" {
+  description = "Guthub token."
   type        = string
-  sensitive   = true # Good practice for secrets
+  sensitive   = false # Good practice for secrets
+}
+
+variable "github_repo_url" {
+  description = "GitHub Repo URL."
+  type        = string
+  sensitive   = false # Good practice for secrets
 }

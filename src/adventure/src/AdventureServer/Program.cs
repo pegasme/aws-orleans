@@ -30,29 +30,39 @@ try
 
     builder.UseOrleans(siloBuilder =>
     {
-        siloBuilder.AddDynamoDBGrainStorage(
-            name: builder.Configuration["GrainStorage"],
-            configureOptions: options =>
+        siloBuilder.AddDynamoDBGrainStorageAsDefault(options =>
             {
                 options.AccessKey = builder.Configuration["AWS_ACCESS_KEY_ID"];
                 options.SecretKey = builder.Configuration["AWS_SECRET_ACCESS_KEY"];
                 options.TableName = builder.Configuration["GrainTableName"];
+                options.TimeToLive = TimeSpan.FromDays(5);
+                options.Service = builder.Configuration["AWS_REGION"];
+                options.CreateIfNotExists = false;
             });
 
-        if (isDevelopment)
+        if (true)
         {
             siloBuilder.UseLocalhostClustering();
         }
         else
-        { 
-            siloBuilder.UseDynamoDBClustering(options =>
         {
-            options.AccessKey = builder.Configuration["AWS_ACCESS_KEY_ID"];
-            options.SecretKey = builder.Configuration["AWS_SECRET_ACCESS_KEY"];
-            options.TableName = builder.Configuration["ClusterTableName"];
-            options.CreateIfNotExists = false;
-        });
+            siloBuilder.UseDynamoDBClustering(options =>
+            {
+                options.AccessKey = builder.Configuration["AWS_ACCESS_KEY_ID"];
+                options.SecretKey = builder.Configuration["AWS_SECRET_ACCESS_KEY"];
+                options.TableName = builder.Configuration["ClusterTableName"];
+                options.Service = builder.Configuration["AWS_REGION"];
+                options.CreateIfNotExists = false;
+            });
         }
+
+        siloBuilder
+            .Configure<ClusterOptions>(options =>
+            {
+                options.ClusterId = "dev";
+                options.ServiceId = "OrleansBasics";
+            })
+            .ConfigureLogging(logging => logging.AddConsole());
     });
 
     builder.Services.AddTransient<IPlayerGrain, PlayerGrain>();

@@ -1,8 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <PackageReference Include="Microsoft.Orleans.Sdk"/>
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.Orleans.Runtime" />
+    <PackageReference Include="Microsoft.Orleans.Sdk" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\AdventureGrainInterfaces\AdventureGrainInterfaces.csproj"/>
+    <ProjectReference Include="..\AdventureGrainInterfaces\AdventureGrainInterfaces.csproj" />
   </ItemGroup>
 </Project>
