@@ -7,24 +7,48 @@ resource "aws_ecr_repository" "repo" {
   }
 }
 
-resource "aws_ecr_lifecycle_policy" "raven_repo_policy" {
-  repository = aws_ecr_repository.repo.name
+resource "aws_iam_role" "ecr_access_role" {
+  name = "${var.name}-ecr-access-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
 
-  policy = jsonencode({
-    rules = [
+resource "aws_iam_policy" "ecr_access_policy" {
+  name        = "${var.name}-ecr-access-policy"
+  description = "Allow ECR actions for repository"
+  policy      = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
       {
-        rule_priority = 1
-        description   = "Keep only 10 images"
-        selection     = {
-          count_type        = "imageCountMoreThan"
-          count_number      = 10
-          tag_status        = "tagged"
-          tag_prefix_list   = ["prod"]
-        }
-        action = {
-          type = "expire"
-        }
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:PutImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload",
+          "ecr:DescribeRepositories",
+          "ecr:ListImages",
+          "ecr:DescribeImages"
+        ]
+        Resource = aws_ecr_repository.repo.arn
       }
     ]
   })
+}
+
+resource "aws_iam_role_policy_attachment" "ecr_access_attach" {
+  role       = aws_iam_role.ecr_access_role.name
+  policy_arn = aws_iam_policy.ecr_access_policy.arn
 }
