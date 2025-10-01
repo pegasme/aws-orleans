@@ -1,15 +1,23 @@
-﻿using System.Text;
+﻿using Orleans;
+using Orleans.Runtime;
+using System.Text;
 using System.Threading;
 using AdventureGrainInterfaces;
+using Microsoft.Extensions.Logging;
 
 namespace AdventureGrains;
 
-public class PlayerGrain : Grain, IPlayerGrain
+public class PlayerGrain(
+    ILogger<PlayerGrain> logger,
+    [PersistentState("State")] IPersistentState<PlayerGrain.State> state) : Grain, IPlayerGrain
 {
+
     private readonly List<Thing> _things = []; // Things that the player is carrying
     private IRoomGrain? _roomGrain; // Current room
     private bool _killed = false;
     private PlayerInfo _myInfo = null!;
+
+    private Guid GrainKey => this.GetPrimaryKey();
 
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
@@ -77,10 +85,13 @@ public class PlayerGrain : Grain, IPlayerGrain
         return "I don't understand.";
     }
 
-    Task IPlayerGrain.SetName(string name)
+    async Task IPlayerGrain.SetName(string name)
     {
         _myInfo = _myInfo with { Name = name };
-        return Task.CompletedTask;
+
+        // Save the item
+        state.State = state.State with { Item = _myInfo };
+        await state.WriteStateAsync();
     }
 
     Task IPlayerGrain.SetRoomGrain(IRoomGrain room)
@@ -248,5 +259,12 @@ public class PlayerGrain : Grain, IPlayerGrain
 
             _ => "I don't understand"
         };
+    }
+
+    [GenerateSerializer, Immutable]
+    public sealed record class State
+    {
+        [Id(0)]
+        public PlayerInfo? Item { get; init; }
     }
 }

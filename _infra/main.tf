@@ -24,3 +24,10 @@ module "repository" {
   source = "./modules/repository"
   name   = "raven-repository"
 }
+
+module "codedeploy" {
+  source       = "./modules/codedeploy"
+  name         = local.project_name
+  github_token = var.github_token
+  github_repo  = var.github_repo_url
+}
