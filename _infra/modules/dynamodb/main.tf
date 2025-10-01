@@ -17,11 +17,6 @@ resource "aws_dynamodb_table" "grain_store" {
         type = "S"
     }
 
-    attribute {
-        name = "GrainState"
-        type = "S"
-    }
-
     ttl {
         attribute_name = "GrainTtl"
         enabled        = true 
@@ -48,31 +43,6 @@ resource "aws_dynamodb_table" "cluster_store" {
     
     attribute {
         name = "SiloIdentity"
-        type = "S"
-    }
-
-    attribute {
-        name = "SiloName"
-        type = "S"
-    }
-
-    attribute {
-        name = "Address"
-        type = "S"
-    }
-
-    attribute {
-        name = "VersionRow"
-        type = "S"
-    }
-
-    attribute {
-        name = "IAmAliveTime"
-        type = "S"
-    }
-
-    attribute {
-        name = "Port"
         type = "S"
     }
 
