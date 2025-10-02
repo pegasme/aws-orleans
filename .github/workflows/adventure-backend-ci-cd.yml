@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - './src/adventure/**'
+      - 'src/adventure/**'
     types:
       - closed
 

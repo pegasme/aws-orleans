@@ -1,12 +1,10 @@
 name: Adventure Frontend CI/CD pipeline
 on:
-  pull_request:
+  push:
     branches:
       - main
     paths:
-      - './src/adventure-front/**'
-    types:
-      - closed
+      - 'src/adventure-front/**'
 
 jobs:
   build-and-deploy:
