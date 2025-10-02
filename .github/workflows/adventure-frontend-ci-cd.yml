@@ -4,7 +4,7 @@ on:
     branches:
       - main
     paths:
-      - './src/adventure-front/**'
+      - 'src/adventure-front/**'
     types:
       - closed
 

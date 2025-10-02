@@ -3,7 +3,11 @@ import './styles/index.scss';
 
 export const App = () => {
 
-  return <div>Adventure Game</div>;
+  return <div>
+    <h2>Adventure Game</h2>
+    <input name="Name" />
+    <button>Click me</button>
+    </div>;
 };
 
 export default App;
