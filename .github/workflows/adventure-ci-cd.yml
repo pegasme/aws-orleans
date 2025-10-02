@@ -11,7 +11,7 @@ env:
 
 jobs:
   build:
-    name: Build and Push Docker Image to ECR
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -23,10 +23,10 @@ jobs:
           dotnet-version: 9.0.x
 
       - name: Install dependencies for Backend
-        run: dotnet restore /src/adventure/src/AdventureGame.sln
+        run: dotnet restore ./src/adventure/src/AdventureGame.sln
 
       - name: Build Backend
-        run: dotnet build /src/adventure/src/AdventureGame.sln --configuration Release --no-restore
+        run: dotnet build ./src/adventure/src/AdventureGame.sln --configuration Release --no-restore
 
 
     
