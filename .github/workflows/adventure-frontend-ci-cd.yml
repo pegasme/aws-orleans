@@ -1,0 +1,30 @@
+name: Adventure Frontend CI/CD pipeline
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - './src/adventure-front/**'
+    types:
+      - closed
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install dependencies for Frontend
+        run: npm install
+        working-directory: ./src/adventure-frontend
+
+      - name: Build Frontend
+        run: npm run build
+        working-directory: ./src/adventure-frontend

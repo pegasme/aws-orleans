@@ -31,3 +31,8 @@ module "codedeploy" {
   github_token = var.github_token
   github_repo  = var.github_repo_url
 }
+
+module "s3" {
+  source       = "./modules/s3"
+  bucket_name  = local.project_name
+}
