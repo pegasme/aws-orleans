@@ -22,7 +22,7 @@ jobs:
           node-version: '16'
 
       - name: Install dependencies for Frontend
-        run: npm install
+        run: npm install --legacy-peer-deps
         working-directory: src/adventure-frontend
 
       - name: Build Frontend
