@@ -6,8 +6,8 @@ on:
       - main
     paths:
       - 'src/adventure/**'
-    types:
-      - closed
+      - '.github/workflows/adventure-fbackend-ci-cd.yml'
+      - '_infra/**'
 
 env:
   AWS_REGION: us-east-1
