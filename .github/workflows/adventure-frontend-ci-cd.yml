@@ -21,8 +21,16 @@ jobs:
 
       - name: Install dependencies for Frontend
         run: npm install
-        working-directory: ./src/adventure-frontend
+        working-directory: src/adventure-frontend
 
       - name: Build Frontend
         run: npm run build
-        working-directory: ./src/adventure-frontend
+        working-directory: src/adventure-frontend
+
+      - name: Sync to S3
+        run: |
+          aws s3 sync build/ s3://${{ env.AWS_S3_SITE_BUCKET_NAME }} --delete
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_ID }}
+          AWS_REGION: us-east-1
