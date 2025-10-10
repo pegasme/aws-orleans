@@ -6,7 +6,6 @@ dist/
 npm-debug.log*
 yarn-error.log*
 coverage/
-public/
 .eslintcache
 *.local
 *.lock
