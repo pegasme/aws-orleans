@@ -9,8 +9,8 @@ on:
       - '_infra/**'
 
 jobs:
-  build-and-deploy:
-    name: Build and Deploy
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -28,7 +28,7 @@ jobs:
       - name: Build Frontend
         run: npm run build
         working-directory: src/adventure-frontend
-
+        
       - name: Sync to S3
         run: |
           aws s3 sync build/ s3://${{ env.AWS_S3_SITE_BUCKET_NAME }} --delete
