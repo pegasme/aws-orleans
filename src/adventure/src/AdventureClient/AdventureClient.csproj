@@ -17,6 +17,7 @@
     <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\AdventureClient.Services\AdventureClient.Services.csproj" />
     <ProjectReference Include="..\AdventureGrainInterfaces\AdventureGrainInterfaces.csproj" />
   </ItemGroup>
 </Project>

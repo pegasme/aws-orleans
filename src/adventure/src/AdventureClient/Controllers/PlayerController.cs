@@ -2,6 +2,8 @@ using System;
 using System.Threading.Tasks;
 using AdventureGrainInterfaces;
 using Microsoft.AspNetCore.Mvc;
+using AdventureClient.Services.Models;
+using AdventureClient.Services.Interfaces;
 
 namespace AdventureClient.Controllers
 {
@@ -9,26 +11,29 @@ namespace AdventureClient.Controllers
     [Route("api/[controller]")]
     public class PlayerController : ControllerBase
     {
-        private readonly IGrainFactory _grainFactory;
+        private readonly IPlayerService _playerService;
 
-        public PlayerController(IGrainFactory grainFactory) => _grainFactory = grainFactory;
+        public PlayerController(IPlayerService playerService) => _playerService = playerService;
 
         // TODO check that player does not exists
         [HttpPost("create")]
-        public async Task<IActionResult> CreatePlayer([FromBody] PlayerDto player)
+        public async Task<IActionResult> CreatePlayer([FromBody]CreatePlayerDto player)
         {
-            var playerGrain = _grainFactory.GetGrain<IPlayerGrain>(Guid.NewGuid());
-            await playerGrain.SetName(player.Name);
-
-            var room1 = _grainFactory.GetGrain<IRoomGrain>(0);
-            await playerGrain.SetRoomGrain(room1);
-
-            return Ok();
+            var newPlayer = await _playerService.CreatePlayer(player);
+            return Ok(newPlayer);
         }
-    }
 
-    public class PlayerDto
-    {
-        public string Name { get; set; }
+        [HttpGet("{playerId}")]
+        public async Task<IActionResult> GetPlayer(Guid playerId)
+        { 
+            var player = await _playerService.GetPlayer(playerId);
+
+            if (player == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(player);
+        }
     }
 }
