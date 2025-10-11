@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'src/adventure/**'
-      - '.github/workflows/adventure-fbackend-ci-cd.yml'
+      - '.github/workflows/adventure-backend-ci-cd.yml'
       - '_infra/**'
 
 env:
@@ -39,7 +39,7 @@ jobs:
         id: build-client
         uses: docker/build-push-action@v6
         with:
-          ccontext: ./src/adventure/src/AdventureClient
+          context: ./src/adventure/src/AdventureClient
           push: true
 
 

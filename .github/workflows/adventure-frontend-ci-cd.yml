@@ -4,7 +4,7 @@ on:
     branches:
       - main
     paths:
-      - 'src/adventure-front/**'
+      - 'src/adventure-frontend/**'
       - '.github/workflows/adventure-frontend-ci-cd.yml'
       - '_infra/**'
 
