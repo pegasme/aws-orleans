@@ -3,7 +3,7 @@ import './styles.scss';
 
 export const Room = () => {
   return <div className="page-room">
-    Some room
+    Some room info
   </div>;
 };
 
