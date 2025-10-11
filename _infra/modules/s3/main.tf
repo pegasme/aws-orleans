@@ -39,3 +39,25 @@ resource "aws_s3_bucket_acl" "site" {
   bucket = aws_s3_bucket.site.id
   acl    = "public-read"
 }
+
+resource "aws_s3_bucket_policy" "allow_access_from_web" {
+  bucket = aws_s3_bucket.site.id
+  policy = data.aws_iam_policy_document.allow_access_from_web.json
+}
+
+data "aws_iam_policy_document" "allow_access_from_web" {
+  statement {
+    principals {
+      type        = "AWS"
+      identifiers = ["123456789012"]
+    }
+
+    actions = [
+      "s3:GetObject"
+    ]
+
+    resources = [
+      "${aws_s3_bucket.site.arn}/*",
+    ]
+  }
+}
