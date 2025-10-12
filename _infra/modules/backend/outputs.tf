@@ -1,5 +1,5 @@
 output "api_gateway_arn" {
-  value       = aws_api_gateway_rest_api.adventure_api.arn
+  value       = aws_apigatewayv2_api.adventure_api.arn
   description = "Adventure Api Gateway ARN"
 }
 
