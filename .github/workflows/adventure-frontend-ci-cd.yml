@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - develop
     paths:
       - 'src/adventure-frontend/**'
       - '.github/workflows/adventure-frontend-ci-cd.yml'
