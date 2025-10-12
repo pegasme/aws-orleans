@@ -5,5 +5,5 @@ output "ecr_role_arn" {
 
 output "repository_name" {
   description = "ECR Repository name"
-  value       = aws_iam_role.aws_ecr_repository.name
+  value       = aws_ecr_repository.repo.name
 }
