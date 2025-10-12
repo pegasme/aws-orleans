@@ -7,7 +7,6 @@ on:
     paths:
       - 'src/adventure-frontend/**'
       - '.github/workflows/adventure-frontend-ci-cd.yml'
-      - '_infra/**'
 
 jobs:
   build:

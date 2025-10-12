@@ -10,7 +10,6 @@ on:
     paths:
       - 'src/adventure/**'
       - '.github/workflows/adventure-backend-ci-cd.yml'
-      - '_infra/**'
 
 env:
   AWS_REGION: us-east-1
