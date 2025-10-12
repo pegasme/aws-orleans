@@ -65,13 +65,13 @@ jobs:
           uses: aws-actions/amazon-ecr-login@v2
         
         - name: Build, tag and push Client image to ECR
-          working-directory: src/adventure/src/AdventureClient
+          working-directory: src/adventure/src
           env:
             REGISTRY: ${{steps.login-ecr.outputs.registry}}
             REPOSITORY: ${{ vars.AWS_ECR_NAME }}
             IMAGE_TAG: ${{github.sha}}
           run: |-
-                docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+                docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG --file ./AdventureClient/Dockerfile .
                 docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
     
