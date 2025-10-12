@@ -3,7 +3,7 @@ output "ecr_role_arn" {
   value       = aws_iam_role.ecr_access_role.arn
 }
 
-output "repository_name" {
-  description = "ECR Repository name"
-  value       = aws_ecr_repository.repo.name
+output "repository_url" {
+  description = "ECR Repository URL"
+  value       = aws_ecr_repository.repo.repository_url
 }
