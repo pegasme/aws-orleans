@@ -1,5 +1,7 @@
 name: Adventure Frontend CI/CD pipeline
 on:
+  # Trigger the action manually from the UI
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -7,7 +9,6 @@ on:
     paths:
       - 'src/adventure-frontend/**'
       - '.github/workflows/adventure-frontend-ci-cd.yml'
-      - '_infra/**'
 
 jobs:
   build:
