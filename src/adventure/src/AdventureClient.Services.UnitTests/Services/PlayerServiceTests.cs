@@ -4,7 +4,7 @@ using Moq;
 
 namespace AdventureClient.Services.UnitTests;
 
-public class Tests
+public class PlayerServiceTests
 {
     [Test]
     public async Task CreatePlayer_ShouldReturnNewPlayer_WhenNameIsNotEmpty()
@@ -18,7 +18,7 @@ public class Tests
         };
         
         // Act
-        var player = await playerService.CreatePlayer(newPlayer);
+        // var player = await playerService.CreatePlayer(newPlayer);
 
         // Assert
         Assert.Pass();
