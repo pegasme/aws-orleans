@@ -74,12 +74,10 @@ jobs:
           
         - name: Update Lambda function to use new image
           env:
-            ECR_REGISTRY: ${{steps.login-ecr.outputs.registry}}
-            ECR_REPOSITORY: ${{ vars.AWS_ECR_NAME }}
-            IMAGE_TAG: client-${{github.sha}}
+            CLIENT_LAMBDA_FUNCTION_NAME: ${{steps.login-ecr.outputs.registry}}
           run: |
             aws lambda update-function-code \
-              --function-name ${{ env.CLIENT_LAMBDA_FUNCTION_NAME }} \
+              --function-name ${{ vars.CLIENT_LAMBDA_FUNCTION_NAME }} \
               --image-uri ${{ env.image_uri }}
 
   push_server:
