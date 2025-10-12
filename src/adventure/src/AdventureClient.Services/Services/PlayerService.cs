@@ -1,8 +1,9 @@
+using AdventureClient.Services.Interfaces;
 using AdventureClient.Services.Mapping;
 using AdventureClient.Services.Models;
 using AdventureGrainInterfaces;
 
-namespace AdventureClient.Services.Interfaces;
+namespace AdventureClient.Services.Services;
 
 public class PlayerService : IPlayerService
 {
