@@ -52,3 +52,27 @@ resource "aws_iam_role_policy_attachment" "ecr_access_attach" {
   role       = aws_iam_role.ecr_access_role.name
   policy_arn = aws_iam_policy.ecr_access_policy.arn
 }
+
+resource "aws_ecr_lifecycle_policy" "repo_lifecycle_policy" {
+  repository = aws_ecr_repository.repo.name
+
+  policy = <<EOF
+{
+    "rules": [
+        {
+            "rulePriority": 1,
+            "description": "Expire images older than 14 days",
+            "selection": {
+                "tagStatus": "untagged",
+                "countType": "sinceImagePushed",
+                "countUnit": "days",
+                "countNumber": 14
+            },
+            "action": {
+                "type": "expire"
+            }
+        }
+    ]
+}
+EOF
+}

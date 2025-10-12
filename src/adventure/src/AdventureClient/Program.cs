@@ -1,3 +1,5 @@
+using AdventureClient.Services.Interfaces;
+using AdventureClient.Services.Services;
 using AdventureGrainInterfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -22,6 +24,8 @@ try
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
+
+    builder.Services.AddSingleton<IPlayerService, PlayerService>();
 
     builder.UseOrleansClient(clientBuilder =>
     {

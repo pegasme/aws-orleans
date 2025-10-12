@@ -18,4 +18,9 @@
     <ProjectReference Include="..\AdventureGrainInterfaces\AdventureGrainInterfaces.csproj" />
     <ProjectReference Include="..\AdventureGrains\AdventureGrains.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="AdventureMap.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>
