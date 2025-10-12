@@ -68,13 +68,13 @@ jobs:
         - name: Build, tag and push Client image to ECR
           working-directory: src/adventure/src
           env:
-            REGISTRY: ${{steps.login-ecr.outputs.registry}}
-            REPOSITORY: ${{ vars.AWS_ECR_NAME }}
+            ECR_REGISTRY: ${{steps.login-ecr.outputs.registry}}
+            ECR_REPOSITORY: ${{ vars.AWS_ECR_NAME }}
             IMAGE_TAG: ${{github.sha}}
           run: |
                 docker build -t $ECR_REPOSITORY:$IMAGE_TAG --file ./AdventureClient/Dockerfile .
                 docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-                docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+                docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
                 echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
     
