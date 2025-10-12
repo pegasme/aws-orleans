@@ -65,7 +65,11 @@ resource "aws_iam_role" "adventure_api_role" {
 
 resource "aws_lambda_function" "adventure_api" {
     function_name    = local.lambda_role_name
+    package_type     = "Image"
     role             = aws_iam_role.adventure_api_role.arn
+    image_uri        = var.default_image_url
+    timeout       = 30
+    memory_size   = 256
 
     environment {
       variables = {
