@@ -1,5 +1,5 @@
 # Use the official .NET 9 SDK image to build the app
-FROM public.ecr.aws/lambda/dotnet:8 as base
+FROM public.ecr.aws/lambda/dotnet:9 as base
 ENV DOTNET_EnableWriteXorExecute=0
 WORKDIR /app
 
