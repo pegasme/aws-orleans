@@ -1,8 +1,9 @@
 # Use the official .NET 9 SDK image to build the app
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM public.ecr.aws/lambda/dotnet:8 as base
 ENV DOTNET_EnableWriteXorExecute=0
 WORKDIR /app
 
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 # Copy csproj and restore as distinct layers
 COPY . .
 RUN dotnet restore
