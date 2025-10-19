@@ -157,12 +157,12 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
     portMappings: [
     {
       containerPort: 11111,
-      hostPort: 0,
+      hostPort: 11111,
       protocol: "tcp"
     },
     {
       containerPort: 30000,
-      hostPort: 0,
+      hostPort: 30000,
       protocol: "tcp"
     }
     ],
