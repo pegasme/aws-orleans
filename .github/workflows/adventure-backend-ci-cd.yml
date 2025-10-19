@@ -17,7 +17,7 @@ env:
   ECS_TASK_DEFINITION: adventure-server-task-definition
   ECS_SERVICE: adventure-ecs-server
   ECS_CLUSTER: adventure-ecs-cluster
-  CONTAINER_NAME: adventure-server
+  CONTAINER_NAME: adventure-server-container
 
 jobs:
   build:
