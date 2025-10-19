@@ -34,7 +34,7 @@ try
         clientBuilder.UseLocalhostClustering(30000, "OrleansBasics", "dev");
     });
 
-    builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
+    builder.Services.AddAWSLambdaHosting(LambdaEventSource.RestApi);
 
     using var app = builder.Build();
 

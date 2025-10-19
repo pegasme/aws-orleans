@@ -32,8 +32,12 @@ resource "aws_apigatewayv2_api" "adventure_api" {
 resource "aws_apigatewayv2_integration" "adventure_api_integration" {
   api_id                 = aws_apigatewayv2_api.adventure_api.id
   integration_type       = "AWS_PROXY"
+  connection_type        = "INTERNET"
+  description            = "adventure client api"
+  integration_method     = "POST"
   integration_uri        = aws_lambda_function.adventure_api.invoke_arn
   payload_format_version = "2.0"
+  timeout_milliseconds   = 30000
 }
 
 resource "aws_apigatewayv2_route" "adventure_api_route" {
@@ -94,8 +98,14 @@ resource "aws_lambda_function" "adventure_api" {
     environment {
       variables = {
         ENVIRONMENT = "production"
+        ASPNETCORE_ENVIRONMENT = "Production"
       }
     }
+}
+
+resource "aws_cloudwatch_log_group" "adventure_lambda_logging" {
+  name              = "/aws/api/${aws_lambda_function.adventure_api.function_name}"
+  retention_in_days = 3
 }
 
 ###############
@@ -110,6 +120,7 @@ resource "aws_ecs_service" "adventure-server" {
   name            = local.aws_ecs_service_name
   desired_count   = 1
   task_definition = aws_ecs_task_definition.adventure_server_task_definition.arn
+  cluster         = aws_ecs_cluster.adventure_cluster.id
 
   network_configuration {
    subnets         = [aws_subnet.subnet.id, aws_subnet.subnet2.id]
