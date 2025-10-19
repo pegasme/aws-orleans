@@ -8,7 +8,7 @@ locals {
     aws_ecs_service_name = "${var.name}-ecs-service"
     aws_ecs_cluster_name = "${var.name}-ecs-cluster"
     aws_task_def_name = "${var.name}-server-task-definition"
-    aws_ecs_keyapir = "${var.name}-ecs-keypair"
+    aws_ecs_keyapir = "${var.name}-ecs-keypair" // Created manually
     
     server_tag_name = "${var.name}-server"
 }
@@ -178,11 +178,6 @@ resource "aws_subnet" "subnet2" {
 resource "aws_security_group" "adventure_server_security_group" {
  name   = "${local.aws_ecs_service_name}-sg"
  vpc_id = aws_vpc.adventure-server-vpc.id
-}
-
-resource "aws_key_pair" "adventure_server_ecs_keypair" {
-  key_name   = local.aws_ecs_keyapir
-  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDoyBmPD+8YOQLFoACQHD+Ir6xO2DPkmNGRi1uy27YuFkdCRZi4aikzmvYse5wr6Gml6AVxcJWwqCyqczc0LiBl57HzCd/ebYRGAtKXMashXI97zWJKgTrxao/TRgIE2QoyTccXrOu03d7IQqws7RhzVMjUNNxMz1kPBLT/BvKeLw== ecs@example.com"
 }
 
 resource "aws_launch_template" "adventure_server_ecs_lt" {
