@@ -181,7 +181,7 @@ resource "aws_security_group" "adventure_server_security_group" {
 
 resource "aws_launch_template" "adventure_server_ecs_lt" {
  name_prefix   = "${local.aws_ecs_service_name}-template"
- image_id      = "ami-062c116e449466e7f"
+ image_id      = "ami-0341d95f75f311023" # Amazon Linux 2 ECS Optimized AMI
  instance_type = "t3.micro"
 
  key_name               = "ec2ecsglog"
@@ -232,10 +232,6 @@ resource "aws_vpc_endpoint" "adventure_dynamodb_endpoint" {
   vpc_id            = aws_vpc.adventure-server-vpc.id
   service_name      = "com.amazonaws.us-east-1.dynamodb"
   vpc_endpoint_type = "Gateway"
-
-  security_group_ids = [
-    aws_security_group.adventure_server_security_group.id,
-  ]
 
   tags = {
    name = local.server_tag_name
