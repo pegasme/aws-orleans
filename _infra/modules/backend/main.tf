@@ -260,3 +260,11 @@ resource "aws_internet_gateway" "internet_gateway" {
    Name = "${local.aws_ecs_service_name}-ig"
  }
 }
+
+resource "aws_route_table" "route_table" {
+ vpc_id = aws_vpc.adventure-server-vpc.id
+ route {
+   cidr_block = "0.0.0.0/0"
+   gateway_id = aws_internet_gateway.internet_gateway.id
+ }
+}
