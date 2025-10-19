@@ -1,14 +1,18 @@
 
+data "aws_caller_identity" "current" {}
+
 locals {
-    lambda_role_name = "${var.name}-lambda-role"
+    lambda_role_name            = "${var.name}-lambda-role"
     lambda_client_function_name = "${var.name}-client"
 
     api_gateway_name = "${var.name}-api-gateway"
 
     aws_ecs_service_name = "${var.name}-ecs-service"
     aws_ecs_cluster_name = "${var.name}-ecs-cluster"
-    aws_task_def_name = "${var.name}-server-task-definition"
-    aws_ecs_keyapir = "${var.name}-ecs-keypair" // Created manually
+    aws_task_def_name    = "${var.name}-server-task-definition"
+    aws_ecs_keyapir      = "${var.name}-ecs-keypair" // Created manually
+
+    account_id = data.aws_caller_identity.current.account_id
     
     server_tag_name = "${var.name}-server"
 }
@@ -138,6 +142,7 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
   family            = local.aws_task_def_name
   cpu               = 256
   network_mode      = "awsvpc"
+  execution_role_arn = "arn:aws:iam::${local.account_id}:role/ecsTaskExecutionRole"
 
   runtime_platform {
    operating_system_family = "LINUX"
@@ -149,10 +154,18 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
     image     = var.default_server_image_url
     essential = true
     memory    = 512
-    portMappings = [{
-      containerPort = 80
-      hostPort      = 80
-    }]
+    portMappings: [
+    {
+      containerPort: 11111,
+      hostPort: 0,
+      protocol: "tcp"
+    },
+    {
+      containerPort: 30000,
+      hostPort: 0,
+      protocol: "tcp"
+    }
+    ],
     environment = [
       {
         name  = "ENVIRONMENT"
