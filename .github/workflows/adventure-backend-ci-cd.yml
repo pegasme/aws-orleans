@@ -52,7 +52,7 @@ jobs:
       environment: default
       name: Push Client Api to ECR
       outputs:
-       image_uri: ${{ steps.build-and-push.outputs.image }}
+       image_uri: ${{ steps.ecr.outputs.image }}
       steps: 
         - name: Checkout repo
           uses: actions/checkout@v5
@@ -68,7 +68,8 @@ jobs:
           id: login-ecr
           uses: aws-actions/amazon-ecr-login@v2
         
-        - name: Build, tag and push Client image to ECR
+        - id: ecr
+          name: Build, tag and push Client image to ECR
           working-directory: src/adventure/src
           env:
             IMAGE_URI: ${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_ECR_NAME }}:client-${{ github.sha }}
@@ -102,7 +103,7 @@ jobs:
       environment: default
       name: Push Server to ECR
       outputs:
-       image_uri: ${{ steps.build-and-push.outputs.image }}
+       image_uri: ${{ steps.ecr.outputs.image }}
       steps: 
         - name: Checkout repo
           uses: actions/checkout@v5
@@ -119,6 +120,7 @@ jobs:
           uses: aws-actions/amazon-ecr-login@v2
         
         - name: Build, tag and push server image to ECR
+          id: ecr
           working-directory: src/adventure/src
           env:
             ECR_REGISTRY: ${{steps.login-ecr.outputs.registry}}
