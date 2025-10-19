@@ -253,3 +253,10 @@ resource "aws_vpc_endpoint" "adventure_dynamodb_endpoint" {
    name = local.server_tag_name
  }
 }
+
+resource "aws_internet_gateway" "internet_gateway" {
+ vpc_id = aws_vpc.adventure-server-vpc.id
+ tags = {
+   Name = "${local.aws_ecs_service_name}-ig"
+ }
+}
