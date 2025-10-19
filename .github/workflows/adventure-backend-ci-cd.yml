@@ -14,6 +14,10 @@ on:
 env:
   AWS_REGION: us-east-1
   IMAGE_TAG: latest
+  ECS_TASK_DEFINITION: adventure-server-task-definition
+  ECS_SERVICE: adventure-ecs-server
+  ECS_CLUSTER: adventure-ecs-cluster
+  CONTAINER_NAME: adventure-server
 
 jobs:
   build:
@@ -46,7 +50,9 @@ jobs:
       runs-on: ubuntu-latest
       needs: build
       environment: default
-      name: Push Api to ECR
+      name: Push Client Api to ECR
+      outputs:
+       image_uri: ${{ steps.ecr.outputs.image }}
       steps: 
         - name: Checkout repo
           uses: actions/checkout@v5
@@ -62,7 +68,8 @@ jobs:
           id: login-ecr
           uses: aws-actions/amazon-ecr-login@v2
         
-        - name: Build, tag and push Client image to ECR
+        - id: ecr
+          name: Build, tag and push Client image to ECR
           working-directory: src/adventure/src
           env:
             IMAGE_URI: ${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_ECR_NAME }}:client-${{ github.sha }}
@@ -70,23 +77,33 @@ jobs:
                 echo "image=$IMAGE_URI" >> $GITHUB_OUTPUT
                 docker build -t $IMAGE_URI --file ./AdventureClient/Dockerfile .
                 docker push $IMAGE_URI
-                echo "image_uri=$IMAGE_URI" >> $GITHUB_ENV
-          
-        - name: Update Lambda function to use new image
-          env:
-            ECR_REGISTRY: ${{steps.login-ecr.outputs.registry}}
-            ECR_REPOSITORY: ${{ vars.AWS_ECR_NAME }}
-            IMAGE_TAG: client-${{github.sha}}
-          run: |
-            aws lambda update-function-code \
-              --function-name ${{ env.CLIENT_LAMBDA_FUNCTION_NAME }} \
-              --image-uri ${{ env.image_uri }}
+
+  update_client:
+    runs-on: ubuntu-latest
+    needs: push_client
+    environment: default
+    name: Update Client Lambda Function
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Update Lambda function to use new image
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ vars.CLIENT_LAMBDA_FUNCTION_NAME }} \
+            --image-uri ${{ needs.push_client.outputs.image_uri }}
 
   push_server:
       runs-on: ubuntu-latest
       needs: build
       environment: default
       name: Push Server to ECR
+      outputs:
+       image_uri: ${{ steps.ecr.outputs.image }}
       steps: 
         - name: Checkout repo
           uses: actions/checkout@v5
@@ -103,6 +120,7 @@ jobs:
           uses: aws-actions/amazon-ecr-login@v2
         
         - name: Build, tag and push server image to ECR
+          id: ecr
           working-directory: src/adventure/src
           env:
             ECR_REGISTRY: ${{steps.login-ecr.outputs.registry}}
@@ -112,5 +130,35 @@ jobs:
                 echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
                 docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG --file ./AdventureServer/Dockerfile .
                 docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+    
+  update_server:
+    runs-on: ubuntu-latest
+    needs: push_server
+    environment: default
+    name: Update Server ECS Service
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }} 
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@c804dfbdd57f713b6c079302a4c01db7017a36fc
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION }}
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ needs.push_server.outputs.image_uri }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@df9643053eda01f169e64a0e60233aacca83799a
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+      
 
     

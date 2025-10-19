@@ -16,6 +16,8 @@ Log.Logger = new LoggerConfiguration()
 
 Log.Information("Starting up!");
 
+bool isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
+
 try
 {
     var builder = WebApplication.CreateBuilder(args);
@@ -31,6 +33,8 @@ try
     {
         clientBuilder.UseLocalhostClustering(30000, "OrleansBasics", "dev");
     });
+
+    builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
 
     using var app = builder.Build();
 

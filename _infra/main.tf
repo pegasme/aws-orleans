@@ -40,5 +40,6 @@ module "s3" {
 module "backend" {
   source       = "./modules/backend"
   name  = local.project_name
-  default_image_url = "${module.repository.repository_url}:client"
+  default_client_image_url = "${module.repository.repository_url}:client"
+  default_server_image_url = "${module.repository.repository_url}:server"
 }

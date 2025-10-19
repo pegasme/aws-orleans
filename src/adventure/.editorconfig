@@ -4,9 +4,6 @@ root = true
 indent_style = space
 indent_size = 4
 charset = utf-8
-end_of_line = lf
-insert_final_newline = true
-dotnet_sort_system_directives_first = true
 dotnet_style_qualification_for_field = false
 dotnet_style_qualification_for_property = false
 dotnet_style_qualification_for_method = false
@@ -25,3 +22,15 @@ indent_size = 2
 
 [*.md]
 trim_trailing_whitespace = false
+
+# New line preferences
+end_of_line = lf
+insert_final_newline = true
+
+# Organize usings
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+file_header_template = unset
+
+# Field preferences
+dotnet_style_readonly_field = true
