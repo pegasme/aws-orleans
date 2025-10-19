@@ -15,8 +15,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdventureClient.Services", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdventureClient.Services.UnitTests", "AdventureClient.Services.UnitTests\AdventureClient.Services.UnitTests.csproj", "{F3E792E1-948B-46ED-B6D6-853E89EB9101}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "..\..\..\..\Test\Test\Test.csproj", "{A9FAB275-4E92-4A4C-9936-90DDF01024AF}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
