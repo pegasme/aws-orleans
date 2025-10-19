@@ -281,3 +281,30 @@ resource "aws_route_table" "route_table" {
    gateway_id = aws_internet_gateway.internet_gateway.id
  }
 }
+
+resource "aws_ecs_capacity_provider" "adventure_ecs_capacity_provider" {
+ name = "${local.aws_ecs_service_name}-cp"
+
+ auto_scaling_group_provider {
+   auto_scaling_group_arn = aws_autoscaling_group.adventure_server_ecs_asg.arn
+
+   managed_scaling {
+     maximum_scaling_step_size = 1000
+     minimum_scaling_step_size = 1
+     status                    = "ENABLED"
+     target_capacity           = 2
+   }
+ }
+}
+
+resource "aws_ecs_cluster_capacity_providers" "example" {
+ cluster_name = aws_ecs_cluster.adventure_cluster.name
+
+ capacity_providers = [aws_ecs_capacity_provider.adventure_ecs_capacity_provider.name]
+
+ default_capacity_provider_strategy {
+   base              = 1
+   weight            = 100
+   capacity_provider = aws_ecs_capacity_provider.adventure_ecs_capacity_provider.name
+ }
+}
