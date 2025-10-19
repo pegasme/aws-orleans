@@ -3,9 +3,14 @@ variable "name" {
   description = "A name to associate with service."
 }
 
-variable "default_image_url" {
+variable "default_client_image_url" {
   type        = string
-  description = "The URI of a container image in ECR."
+  description = "The URI of a container image in Lambda."
+}
+
+variable "default_server_image_url" {
+  type        = string
+  description = "The URI of a container image in ECS."
 }
 
 variable "vpc_cidr" {

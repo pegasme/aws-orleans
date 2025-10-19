@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Orleans.Configuration;
 using Orleans.Hosting;
+using Orleans.Serialization;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
@@ -67,6 +68,7 @@ try
     });
 
     builder.Services.AddAWSContainerMetadataService();
+    builder.Services.AddSerializer(serializerBuilder => serializerBuilder.AddNewtonsoftJsonSerializer(type => type.Namespace.StartsWith("AdventureGrains")));
 
     var app = builder.Build();
     app.UseSerilogRequestLogging();
