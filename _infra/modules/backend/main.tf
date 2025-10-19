@@ -8,6 +8,7 @@ locals {
     aws_ecs_service_name = "${var.name}-ecs-service"
     aws_ecs_cluster_name = "${var.name}-ecs-cluster"
     aws_task_def_name = "${var.name}-server-task-definition"
+    aws_ecs_keyapir = "${var.name}-ecs-keypair"
     
     server_tag_name = "${var.name}-server"
 }
@@ -179,12 +180,17 @@ resource "aws_security_group" "adventure_server_security_group" {
  vpc_id = aws_vpc.adventure-server-vpc.id
 }
 
+resource "aws_key_pair" "adventure_server_ecs_keypair" {
+  key_name   = local.aws_ecs_keyapir
+  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDoyBmPD+8YOQLFoACQHD+Ir6xO2DPkmNGRi1uy27YuFkdCRZi4aikzmvYse5wr6Gml6AVxcJWwqCyqczc0LiBl57HzCd/ebYRGAtKXMashXI97zWJKgTrxao/TRgIE2QoyTccXrOu03d7IQqws7RhzVMjUNNxMz1kPBLT/BvKeLw== ecs@example.com"
+}
+
 resource "aws_launch_template" "adventure_server_ecs_lt" {
- name_prefix   = "${local.aws_ecs_service_name}-template"
+ name          = "${local.aws_ecs_service_name}-template"
  image_id      = "ami-0341d95f75f311023" # Amazon Linux 2 ECS Optimized AMI
  instance_type = "t3.micro"
+ key_name      = local.aws_ecs_keyapir
 
- key_name               = "ec2ecsglog"
  vpc_security_group_ids = [aws_security_group.adventure_server_security_group.id]
  
  iam_instance_profile {
@@ -194,10 +200,14 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
  block_device_mappings {
    device_name = "/dev/xvda"
    ebs {
-     volume_size = 30
+     volume_size = 20
      volume_type = "gp2"
    }
  }
+
+ monitoring {
+    enabled = true
+  }
 
  tag_specifications {
    resource_type = "instance"
