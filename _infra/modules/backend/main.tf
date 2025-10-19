@@ -202,6 +202,22 @@ resource "aws_subnet" "subnet2" {
 resource "aws_security_group" "adventure_server_security_group" {
  name   = "${local.aws_ecs_service_name}-sg"
  vpc_id = aws_vpc.adventure-server-vpc.id
+
+ ingress {
+   from_port   = 0
+   to_port     = 0
+   protocol    = -1
+   self        = "false"
+   cidr_blocks = ["0.0.0.0/0"]
+   description = "any"
+ }
+
+ egress {
+   from_port   = 0
+   to_port     = 0
+   protocol    = "-1"
+   cidr_blocks = ["0.0.0.0/0"]
+ }
 }
 
 resource "aws_launch_template" "adventure_server_ecs_lt" {
