@@ -9,12 +9,13 @@ using Serilog.Events;
 using Serilog.Formatting.Compact;
 using AdventureGrainInterfaces;
 using AdventureGrains;
+using AWSECS.ContainerMetadata.Extensions;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateBootstrapLogger();
 
-Log.Information("Starting up!");
+Log.Information($"Starting up! {Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}");
 
 bool isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
 
@@ -40,7 +41,7 @@ try
                 options.CreateIfNotExists = false;
             });
 
-        if (true)
+        if (isDevelopment)
         {
             siloBuilder.UseLocalhostClustering();
         }
@@ -65,9 +66,7 @@ try
             .ConfigureLogging(logging => logging.AddConsole());
     });
 
-    builder.Services.AddTransient<IPlayerGrain, PlayerGrain>();
-    builder.Services.AddTransient<IRoomGrain, RoomGrain>();
-    builder.Services.AddTransient<IMonsterGrain, MonsterGrain>();
+    builder.Services.AddAWSContainerMetadataService();
 
     var app = builder.Build();
     app.UseSerilogRequestLogging();

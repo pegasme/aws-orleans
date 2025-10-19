@@ -4,6 +4,11 @@ locals {
     lambda_client_function_name = "${var.name}-client"
 
     api_gateway_name = "${var.name}-api-gateway"
+
+    aws_ecs_service_name = "${var.name}-ecs-service"
+    aws_ecs_cluster_name = "${var.name}-ecs-cluster"
+    
+    server_tag_name = "${var.name}-server"
 }
 
 ################################
@@ -89,4 +94,98 @@ resource "aws_lambda_function" "adventure_api" {
         ENVIRONMENT = "production"
       }
     }
+}
+
+###############
+# ECS Service
+###############
+
+resource "aws_ecs_cluster" "adventure_cluster" {
+ name = local.aws_ecs_cluster_name
+}
+
+resource "aws_ecs_service" "adventure-server" {
+  name            = local.aws_ecs_service_name
+  desired_count   = 1
+
+  tags = {
+   name = local.server_tag_name
+ }
+}
+
+resource "aws_vpc" "adventure-server-vpc" {
+ cidr_block           = var.vpc_cidr
+ 
+ tags = {
+   name = local.server_tag_name
+ }
+}
+
+resource "aws_subnet" "subnet" {
+ vpc_id                  = aws_vpc.adventure-server-vpc.id
+ cidr_block              = cidrsubnet(aws_vpc.adventure-server-vpc.cidr_block, 8, 1)
+ map_public_ip_on_launch = true
+ availability_zone       = "us-east-1a"
+}
+
+resource "aws_subnet" "subnet2" {
+ vpc_id                  = aws_vpc.adventure-server-vpc.id
+ cidr_block              = cidrsubnet(aws_vpc.adventure-server-vpc.cidr_block, 8, 2)
+ map_public_ip_on_launch = true
+ availability_zone       = "us-east-1b"
+}
+
+# EC2
+
+resource "aws_security_group" "adventure_server_security_group" {
+ name   = "${local.aws_ecs_service_name}-sg"
+ vpc_id = aws_vpc.adventure-server-vpc.id
+}
+
+resource "aws_launch_template" "adventure_server_ecs_lt" {
+ name_prefix   = "${local.aws_ecs_service_name}-template"
+ image_id      = "ami-062c116e449466e7f"
+ instance_type = "t3.micro"
+
+ key_name               = "ec2ecsglog"
+ vpc_security_group_ids = [aws_security_group.adventure_server_security_group.id]
+ 
+ iam_instance_profile {
+   name = "ecsInstanceRole"
+ }
+
+ block_device_mappings {
+   device_name = "/dev/xvda"
+   ebs {
+     volume_size = 30
+     volume_type = "gp2"
+   }
+ }
+
+ tag_specifications {
+   resource_type = "instance"
+   tags = {
+     Name = "ecs-instance"
+   }
+ }
+
+ user_data = filebase64("${path.module}/ecs.sh")
+}
+
+resource "aws_autoscaling_group" "adventure_server_ecs_asg" {
+ vpc_zone_identifier = [aws_subnet.subnet.id, aws_subnet.subnet2.id]
+ desired_capacity    = 2
+ max_size            = 2
+ min_size            = 1
+
+ launch_template {
+   id      = aws_launch_template.adventure_server_ecs_lt.id
+   version = "$Latest"
+ }
+
+ tag {
+   key                 = "AmazonECSManaged"
+   value               = true
+   propagate_at_launch = true
+ }
 }
