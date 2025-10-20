@@ -203,45 +203,58 @@ resource "aws_security_group" "adventure_server_security_group" {
  name   = "${local.aws_ecs_service_name}-sg"
  vpc_id = aws_vpc.adventure-server-vpc.id
 
- ingress {
-   from_port   = 0
-   to_port     = 0
-   protocol    = -1
-   self        = "false"
-   cidr_blocks = ["0.0.0.0/0"]
-   description = "any"
- }
-
  egress {
-   from_port   = 0
-   to_port     = 0
-   protocol    = "-1"
-   cidr_blocks = ["0.0.0.0/0"]
- }
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# --- ECS Node Role ---
+
+data "aws_iam_policy_document" "adventure_ecs_node_doc" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    effect  = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "adventure_ecs_node_role" {
+  name_prefix        = "${local.aws_ecs_service_name}-role"
+  assume_role_policy = data.aws_iam_policy_document.adventure_ecs_node_doc.json
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_node_role_policy" {
+  role       = aws_iam_role.adventure_ecs_node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
+}
+
+resource "aws_iam_instance_profile" "adventure_ecs_node" {
+  name_prefix = "${local.aws_ecs_service_name}-profile"
+  path        = "/ecs/instance/"
+  role        = aws_iam_role.adventure_ecs_node_role.name
 }
 
 resource "aws_launch_template" "adventure_server_ecs_lt" {
- name          = "${local.aws_ecs_service_name}-template"
+ name_prefix   = "${local.aws_ecs_service_name}-tmpl"
  image_id      = "ami-0341d95f75f311023" # Amazon Linux 2 ECS Optimized AMI
  instance_type = "t3.micro"
  key_name      = local.aws_ecs_keyapir
 
  vpc_security_group_ids = [aws_security_group.adventure_server_security_group.id]
  
- iam_instance_profile {
-   name = "ecsInstanceRole"
- }
+ iam_instance_profile { 
+  arn = aws_iam_instance_profile.adventure_ecs_node.arn 
+  }
 
- block_device_mappings {
-   device_name = "/dev/xvda"
-   ebs {
-     volume_size = 20
-     volume_type = "gp2"
-   }
- }
-
- monitoring {
-    enabled = true
+ monitoring { 
+    enabled = true 
   }
 
  tag_specifications {
@@ -251,7 +264,11 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
    }
  }
 
- user_data = filebase64("${path.module}/ecs.sh")
+ user_data = base64encode(<<-EOF
+      #!/bin/bash
+      echo ECS_CLUSTER=${aws_ecs_cluster.adventure_cluster.name} >> /etc/ecs/ecs.config;
+    EOF
+  )
 }
 
 resource "aws_autoscaling_group" "adventure_server_ecs_asg" {
@@ -260,6 +277,10 @@ resource "aws_autoscaling_group" "adventure_server_ecs_asg" {
  desired_capacity          = 2
  max_size                  = 2
  min_size                  = 1
+ protect_from_scale_in     = false
+ 
+ health_check_grace_period = 0
+ health_check_type         = "EC2"
 
  launch_template {
    id      = aws_launch_template.adventure_server_ecs_lt.id
