@@ -1,5 +1,8 @@
 
 data "aws_caller_identity" "current" {}
+data "aws_ssm_parameter" "ecs_node_ami" {
+  name = "/aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id"
+}
 
 locals {
     lambda_role_name            = "${var.name}-lambda-role"
@@ -243,15 +246,15 @@ resource "aws_iam_instance_profile" "adventure_ecs_node" {
 
 resource "aws_launch_template" "adventure_server_ecs_lt" {
  name_prefix   = "${local.aws_ecs_service_name}-tmpl"
- image_id      = "ami-0341d95f75f311023" # Amazon Linux 2 ECS Optimized AMI
+ image_id      = data.aws_ssm_parameter.ecs_node_ami.value
  instance_type = "t3.micro"
  key_name      = local.aws_ecs_keyapir
 
  vpc_security_group_ids = [aws_security_group.adventure_server_security_group.id]
  
  iam_instance_profile { 
-  arn = aws_iam_instance_profile.adventure_ecs_node.arn 
-  }
+    arn = aws_iam_instance_profile.adventure_ecs_node.arn 
+ }
 
  monitoring { 
     enabled = true 
