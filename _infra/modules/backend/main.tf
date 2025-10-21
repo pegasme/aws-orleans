@@ -119,65 +119,6 @@ resource "aws_cloudwatch_log_group" "adventure_lambda_logging" {
 # ECS Service
 ###############
 
-resource "aws_ecs_cluster" "adventure_cluster" {
- name = local.aws_ecs_cluster_name
-}
-
-resource "aws_ecs_service" "adventure-server" {
-  name            = local.aws_ecs_service_name
-  desired_count   = 1
-  task_definition = aws_ecs_task_definition.adventure_server_task_definition.arn
-  cluster         = aws_ecs_cluster.adventure_cluster.id
-
-  network_configuration {
-   subnets         = [aws_subnet.subnet.id, aws_subnet.subnet2.id]
-   security_groups = [aws_security_group.adventure_server_security_group.id]
-  }  
-
-  depends_on = [aws_autoscaling_group.adventure_server_ecs_asg]
-
-  tags = {
-   name = local.server_tag_name
- }
-}
-
-resource "aws_ecs_task_definition" "adventure_server_task_definition" {
-  family            = local.aws_task_def_name
-  cpu               = 256
-  network_mode      = "awsvpc"
-  execution_role_arn = "arn:aws:iam::${local.account_id}:role/ecsTaskExecutionRole"
-
-  runtime_platform {
-   operating_system_family = "LINUX"
-   cpu_architecture        = "X86_64"
-  }
-
-  container_definitions = jsonencode([{
-    name      = "adventure-server-container"
-    image     = var.default_server_image_url
-    essential = true
-    memory    = 512
-    portMappings: [
-    {
-      containerPort: 11111,
-      hostPort: 11111,
-      protocol: "tcp"
-    },
-    {
-      containerPort: 30000,
-      hostPort: 30000,
-      protocol: "tcp"
-    }
-    ],
-    environment = [
-      {
-        name  = "ENVIRONMENT"
-        value = "Production"
-      }
-    ]
-  }])
-}
-
 resource "aws_vpc" "adventure-server-vpc" {
  cidr_block           = var.vpc_cidr
  
@@ -200,37 +141,75 @@ resource "aws_subnet" "subnet2" {
  availability_zone       = "us-east-1b"
 }
 
-# EC2
+resource "aws_internet_gateway" "internet_gateway" {
+ vpc_id = aws_vpc.adventure-server-vpc.id
+ tags = {
+   Name = "${local.aws_ecs_service_name}-ig"
+ }
+}
 
+resource "aws_route_table" "route_table" {
+ vpc_id = aws_vpc.adventure-server-vpc.id
+ route {
+   cidr_block = "0.0.0.0/0"
+   gateway_id = aws_internet_gateway.internet_gateway.id
+ }
+ tags = {
+   Name = "${local.aws_ecs_service_name}-rt"
+ }
+}
+
+resource "aws_route_table_association" "route_table_association" {
+  subnet_id      = aws_subnet.subnet.id
+  route_table_id = aws_route_table.route_table.id
+}
+
+resource "aws_route_table_association" "route_table_association2" {
+  subnet_id      = aws_subnet.subnet2.id
+  route_table_id = aws_route_table.route_table.id
+}
+
+################
+# Security Group
+################
 resource "aws_security_group" "adventure_server_security_group" {
  name   = "${local.aws_ecs_service_name}-sg"
  vpc_id = aws_vpc.adventure-server-vpc.id
 
- egress {
+ ingress {
     from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-}
 
-# --- ECS Node Role ---
-
-data "aws_iam_policy_document" "adventure_ecs_node_doc" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    effect  = "Allow"
-
-    principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
-    }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = {
+   Name = "${local.aws_ecs_service_name}-sg"
+ }
 }
+
+###############
+# IAM Role
+################
 
 resource "aws_iam_role" "adventure_ecs_node_role" {
   name_prefix        = "${local.aws_ecs_service_name}-role"
-  assume_role_policy = data.aws_iam_policy_document.adventure_ecs_node_doc.json
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_node_role_policy" {
@@ -240,9 +219,20 @@ resource "aws_iam_role_policy_attachment" "ecs_node_role_policy" {
 
 resource "aws_iam_instance_profile" "adventure_ecs_node" {
   name_prefix = "${local.aws_ecs_service_name}-profile"
-  path        = "/ecs/instance/"
   role        = aws_iam_role.adventure_ecs_node_role.name
 }
+
+# -------------------------
+# ECS Cluster
+# -------------------------
+
+resource "aws_ecs_cluster" "adventure_cluster" {
+ name = local.aws_ecs_cluster_name
+}
+
+# -------------------------
+# Launch Template
+# -------------------------
 
 resource "aws_launch_template" "adventure_server_ecs_lt" {
  name_prefix   = "${local.aws_ecs_service_name}-tmpl"
@@ -253,11 +243,12 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
  vpc_security_group_ids = [aws_security_group.adventure_server_security_group.id]
  
  iam_instance_profile { 
-    arn = aws_iam_instance_profile.adventure_ecs_node.arn 
+    name = aws_iam_instance_profile.adventure_ecs_node.name 
  }
 
- monitoring { 
-    enabled = true 
+ network_interfaces {
+    security_groups             = [aws_security_group.adventure_server_security_group.id]
+    associate_public_ip_address = true
   }
 
  tag_specifications {
@@ -274,16 +265,20 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
   )
 }
 
+# -------------------------
+# Auto Scaling Group
+# -------------------------
+
 resource "aws_autoscaling_group" "adventure_server_ecs_asg" {
  name                      = "${local.aws_ecs_service_name}-asg"
  vpc_zone_identifier       = [aws_subnet.subnet.id, aws_subnet.subnet2.id]
  desired_capacity          = 2
  max_size                  = 2
  min_size                  = 1
- protect_from_scale_in     = false
  
- health_check_grace_period = 0
- health_check_type         = "EC2"
+ lifecycle {
+    create_before_destroy = true
+  }
 
  launch_template {
    id      = aws_launch_template.adventure_server_ecs_lt.id
@@ -297,30 +292,9 @@ resource "aws_autoscaling_group" "adventure_server_ecs_asg" {
  }
 }
 
-resource "aws_vpc_endpoint" "adventure_dynamodb_endpoint" {
-  vpc_id            = aws_vpc.adventure-server-vpc.id
-  service_name      = "com.amazonaws.us-east-1.dynamodb"
-  vpc_endpoint_type = "Gateway"
-
-  tags = {
-   name = local.server_tag_name
- }
-}
-
-resource "aws_internet_gateway" "internet_gateway" {
- vpc_id = aws_vpc.adventure-server-vpc.id
- tags = {
-   Name = "${local.aws_ecs_service_name}-ig"
- }
-}
-
-resource "aws_route_table" "route_table" {
- vpc_id = aws_vpc.adventure-server-vpc.id
- route {
-   cidr_block = "0.0.0.0/0"
-   gateway_id = aws_internet_gateway.internet_gateway.id
- }
-}
+# -------------------------
+# ECS Capacity Provider
+# -------------------------
 
 resource "aws_ecs_capacity_provider" "adventure_ecs_capacity_provider" {
  name = "${local.aws_ecs_service_name}-cp"
@@ -329,22 +303,89 @@ resource "aws_ecs_capacity_provider" "adventure_ecs_capacity_provider" {
    auto_scaling_group_arn = aws_autoscaling_group.adventure_server_ecs_asg.arn
 
    managed_scaling {
-     maximum_scaling_step_size = 1000
+     maximum_scaling_step_size = 2
      minimum_scaling_step_size = 1
      status                    = "ENABLED"
-     target_capacity           = 2
+     target_capacity           = 80
    }
  }
 }
 
-resource "aws_ecs_cluster_capacity_providers" "example" {
+resource "aws_ecs_cluster_capacity_providers" "adventure_capacity_providers" {
  cluster_name = aws_ecs_cluster.adventure_cluster.name
 
  capacity_providers = [aws_ecs_capacity_provider.adventure_ecs_capacity_provider.name]
 
  default_capacity_provider_strategy {
    base              = 1
-   weight            = 100
+   weight            = 1
    capacity_provider = aws_ecs_capacity_provider.adventure_ecs_capacity_provider.name
  }
 }
+
+# ------------------------------------------------
+# ECS TASK DEFINITION
+# ------------------------------------------------
+
+resource "aws_ecs_task_definition" "adventure_server_task_definition" {
+  family             = local.aws_task_def_name
+  cpu                = 256
+  memory             = "512"
+  network_mode       = "awsvpc"
+  execution_role_arn = "arn:aws:iam::${local.account_id}:role/ecsTaskExecutionRole"
+
+  runtime_platform {
+   operating_system_family = "LINUX"
+   cpu_architecture        = "X86_64"
+  }
+
+  container_definitions = jsonencode([{
+    name      = "adventure-server-container"
+    image     = var.default_server_image_url
+    essential = true
+    memory    = 512
+    portMappings = [
+    {
+      containerPort: 11111,
+      hostPort: 11111,
+      protocol: "tcp"
+    },
+    {
+      containerPort: 30000,
+      hostPort: 30000,
+      protocol: "tcp"
+    }
+    ],
+    environment = [
+      {
+        name  = "ENVIRONMENT"
+        value = "Production"
+      }
+    ]
+  }])
+}
+
+resource "aws_ecs_service" "adventure-server" {
+  name            = local.aws_ecs_service_name
+  desired_count   = 1
+  task_definition = aws_ecs_task_definition.adventure_server_task_definition.arn
+  cluster         = aws_ecs_cluster.adventure_cluster.id
+  launch_type     = "EC2"
+
+  network_configuration {
+   subnets         = [aws_subnet.subnet.id, aws_subnet.subnet2.id]
+   security_groups = [aws_security_group.adventure_server_security_group.id]
+  }  
+
+  depends_on = [aws_autoscaling_group.adventure_server_ecs_asg]
+
+  tags = {
+   name = local.server_tag_name
+ }
+}
+
+
+
+
+
+
