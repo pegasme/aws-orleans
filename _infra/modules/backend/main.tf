@@ -246,11 +246,6 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
     name = aws_iam_instance_profile.adventure_ecs_node.name 
  }
 
- network_interfaces {
-    security_groups             = [aws_security_group.adventure_server_security_group.id]
-    associate_public_ip_address = true
-  }
-
  tag_specifications {
    resource_type = "instance"
    tags = {
