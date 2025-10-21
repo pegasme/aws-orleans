@@ -1,8 +1,11 @@
 
 data "aws_caller_identity" "current" {}
+
 data "aws_ssm_parameter" "ecs_node_ami" {
   name = "/aws/service/ecs/optimized-ami/amazon-linux-2/recommended/image_id"
 }
+
+data "aws_availability_zones" "available" {}
 
 locals {
     lambda_role_name            = "${var.name}-lambda-role"
@@ -127,18 +130,26 @@ resource "aws_vpc" "adventure-server-vpc" {
  }
 }
 
-resource "aws_subnet" "subnet" {
- vpc_id                  = aws_vpc.adventure-server-vpc.id
- cidr_block              = cidrsubnet(aws_vpc.adventure-server-vpc.cidr_block, 8, 1)
- map_public_ip_on_launch = true
- availability_zone       = "us-east-1a"
+# Public subnets (for NAT & ALB)
+resource "aws_subnet" "public" {
+  count                   = 2
+  vpc_id                  = aws_vpc.adventure-server-vpc.id
+  cidr_block              = cidrsubnet(aws_vpc.adventure-server-vpc.cidr_block, 8, count.index)
+  map_public_ip_on_launch = true
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
+
+  tags = { Name = "ecs-public-${count.index}" }
 }
 
-resource "aws_subnet" "subnet2" {
- vpc_id                  = aws_vpc.adventure-server-vpc.id
- cidr_block              = cidrsubnet(aws_vpc.adventure-server-vpc.cidr_block, 8, 2)
- map_public_ip_on_launch = true
- availability_zone       = "us-east-1b"
+# Private subnets (for ECS instances)
+resource "aws_subnet" "private" {
+  count                   = 2
+  vpc_id                  = aws_vpc.adventure-server-vpc.id
+  cidr_block              = cidrsubnet(aws_vpc.adventure-server-vpc.cidr_block, 8, count.index + 10)
+  map_public_ip_on_launch = false
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
+
+  tags = { Name = "ecs-private-${count.index}" }
 }
 
 resource "aws_internet_gateway" "internet_gateway" {
@@ -148,7 +159,18 @@ resource "aws_internet_gateway" "internet_gateway" {
  }
 }
 
-resource "aws_route_table" "route_table" {
+# NAT Gateway setup
+resource "aws_eip" "nat" {
+  tags   = { Name = "ecs-nat-eip" }
+}
+
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public[*].id
+  tags          = { Name = "ecs-nat" }
+}
+
+resource "aws_route_table" "public_route_table" {
  vpc_id = aws_vpc.adventure-server-vpc.id
  route {
    cidr_block = "0.0.0.0/0"
@@ -160,13 +182,24 @@ resource "aws_route_table" "route_table" {
 }
 
 resource "aws_route_table_association" "route_table_association" {
-  subnet_id      = aws_subnet.subnet.id
-  route_table_id = aws_route_table.route_table.id
+  count          = 2
+  subnet_id      = aws_subnet.public[count.index].id
+  route_table_id = aws_route_table.public_route_table.id
 }
 
-resource "aws_route_table_association" "route_table_association2" {
-  subnet_id      = aws_subnet.subnet2.id
-  route_table_id = aws_route_table.route_table.id
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.adventure-server-vpc.id
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat.id
+  }
+  tags = { Name = "ecs-private-rt" }
+}
+
+resource "aws_route_table_association" "private_assoc" {
+  count          = 2
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private.id
 }
 
 ################
@@ -177,10 +210,10 @@ resource "aws_security_group" "adventure_server_security_group" {
  vpc_id = aws_vpc.adventure-server-vpc.id
 
  ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.adventure_server_security_group.id]
   }
 
   egress {
@@ -256,8 +289,31 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
  user_data = base64encode(<<-EOF
       #!/bin/bash
       echo ECS_CLUSTER=${aws_ecs_cluster.adventure_cluster.name} >> /etc/ecs/ecs.config;
+
+      # Install CloudWatch Agent
+        yum install -y amazon-cloudwatch-agent
+        cat <<CWAGENT > /opt/aws/amazon-cloudwatch-agent/bin/config.json
+        {
+          "metrics": {
+            "append_dimensions": {
+              "AutoScalingGroupName": "$${aws:AutoScalingGroupName}",
+              "InstanceId": "$${aws:InstanceId}"
+            },
+            "metrics_collected": {
+              "mem": {
+                "measurement": ["mem_used_percent"]
+              },
+              "disk": {
+                "measurement": ["disk_used_percent"],
+                "resources": ["*"]
+              }
+            }
+          }
+          CWAGENT
+    systemctl enable amazon-cloudwatch-agent
+    systemctl start amazon-cloudwatch-agent
     EOF
-  )
+      )
 }
 
 # -------------------------
@@ -266,7 +322,7 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
 
 resource "aws_autoscaling_group" "adventure_server_ecs_asg" {
  name                      = "${local.aws_ecs_service_name}-asg"
- vpc_zone_identifier       = [aws_subnet.subnet.id, aws_subnet.subnet2.id]
+ vpc_zone_identifier       = aws_subnet.private[*].id
  desired_capacity          = 2
  max_size                  = 2
  min_size                  = 1
@@ -367,19 +423,111 @@ resource "aws_ecs_service" "adventure-server" {
   cluster         = aws_ecs_cluster.adventure_cluster.id
   launch_type     = "EC2"
 
-  network_configuration {
-   subnets         = [aws_subnet.subnet.id, aws_subnet.subnet2.id]
-   security_groups = [aws_security_group.adventure_server_security_group.id]
-  }  
+  load_balancer {
+    target_group_arn = aws_lb_target_group.adventure_ecs_tg.arn
+    container_name   = "orleans-silo"
+    container_port   = 80
+  }
 
-  depends_on = [aws_autoscaling_group.adventure_server_ecs_asg]
+  depends_on = [aws_lb_listener.adventure_ecs_listener]
 
   tags = {
    name = local.server_tag_name
  }
 }
 
+# ------------------------------------------------
+# Load balancer 
+# ------------------------------------------------
 
+resource "aws_security_group" "alb" {
+  vpc_id = aws_vpc.adventure-server-vpc.id
+  name   = "alb-sg"
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = { Name = "alb-sg" }
+}
+
+resource "aws_lb" "adventure_ecs_lb" {
+  name               = "adventure-ecs-lb"
+  internal           = true
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.adventure_server_security_group.id]
+  subnets            = aws_subnet.public[*].id
+}
+
+resource "aws_lb_target_group" "adventure_ecs_tg" {
+  name     = "adventure-ecs-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.adventure-server-vpc.id
+  target_type = "instance"
+}
+
+resource "aws_lb_listener" "adventure_ecs_listener" {
+  load_balancer_arn = aws_lb.adventure_ecs_lb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.adventure_ecs_tg.arn
+  }
+}
+
+# ----------------------------------------------------
+# IAM Policy: ECS EC2 Access to CloudWatch
+# ----------------------------------------------------
+resource "aws_iam_policy" "adventure_ecs_cloudwatch_policy" {
+  name        = "ecs-cloudwatch-access"
+  description = "Allow ECS instances and tasks to write logs and metrics to CloudWatch"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          # CloudWatch Logs
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams",
+          "logs:DescribeLogGroups",
+
+          # CloudWatch Metrics
+          "cloudwatch:PutMetricData",
+          "cloudwatch:GetMetricData",
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics",
+
+          # ECS container insights (optional)
+          "ec2:DescribeTags",
+          "ec2:DescribeInstances"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "adventure_ecs_attach_cloudwatch" {
+  role       = aws_iam_role.adventure_ecs_node_role.name
+  policy_arn = aws_iam_policy.adventure_ecs_cloudwatch_policy.arn
+}
 
 
 
