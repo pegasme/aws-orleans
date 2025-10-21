@@ -12,6 +12,7 @@ module "dynamodb" {
   source = "./modules/dynamodb"
   name   = local.project_name
   region = var.region
+  ecs_instance_role_name = module.backend.ecs_instance_role_name
 }
 
 module "gw" {

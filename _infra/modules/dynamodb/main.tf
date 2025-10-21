@@ -50,3 +50,36 @@ resource "aws_dynamodb_table" "cluster_store" {
         Name = var.name
     }
 }
+
+resource "aws_iam_policy" "ecs_orleans_dynamodb_policy" {
+  name        = "ecs-orleans-dynamodb-access"
+  description = "Allow ECS (Orleans) to use DynamoDB for clustering and storage"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Scan",
+          "dynamodb:Query",
+          "dynamodb:DescribeTable",
+          "dynamodb:CreateTable"
+        ],
+        Resource = [
+          aws_dynamodb_table.cluster_store.arn,
+          aws_dynamodb_table.grain_store.arn
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_attach_orleans_dynamodb" {
+  role       = var.ecs_instance_role_name
+  policy_arn = aws_iam_policy.ecs_orleans_dynamodb_policy.arn
+}
