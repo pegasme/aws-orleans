@@ -166,7 +166,7 @@ resource "aws_eip" "nat" {
 
 resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public[*].id
+  subnet_id     = aws_subnet.public[0].id
   tags          = { Name = "ecs-nat" }
 }
 
@@ -213,7 +213,7 @@ resource "aws_security_group" "adventure_server_security_group" {
     from_port       = 80
     to_port         = 80
     protocol        = "tcp"
-    security_groups = [aws_security_group.adventure_server_security_group.id]
+    security_groups = [aws_security_group.alb.id]
   }
 
   egress {
@@ -224,7 +224,7 @@ resource "aws_security_group" "adventure_server_security_group" {
   }
 
   tags = {
-   Name = "${local.aws_ecs_service_name}-sg"
+   Name = "${local.aws_ecs_service_name}-private-sg"
  }
 }
 
