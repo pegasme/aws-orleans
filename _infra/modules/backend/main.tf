@@ -13,10 +13,11 @@ locals {
 
     api_gateway_name = "${var.name}-api-gateway"
 
-    aws_ecs_service_name = "${var.name}-ecs-service"
-    aws_ecs_cluster_name = "${var.name}-ecs-cluster"
-    aws_task_def_name    = "${var.name}-server-task-definition"
-    aws_ecs_keyapir      = "${var.name}-ecs-keypair" // Created manually
+    aws_ecs_service_name   = "${var.name}-ecs-service"
+    aws_ecs_cluster_name   = "${var.name}-ecs-cluster"
+    aws_task_def_name      = "${var.name}-server-task-definition"
+    aws_ecs_keyapir        = "${var.name}-ecs-keypair" // Created manually
+    aws_ecs_container_name = "${var.name}-server-container"
 
     account_id = data.aws_caller_identity.current.account_id
     
@@ -361,7 +362,7 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
   }
 
   container_definitions = jsonencode([{
-    name      = "adventure-server-container"
+    name      = local.aws_ecs_container_name
     image     = var.default_server_image_url
     essential = true
     memory    = 512
@@ -387,7 +388,7 @@ resource "aws_ecs_service" "adventure-server" {
 
   load_balancer {
     target_group_arn = aws_lb_target_group.adventure_ecs_tg.arn
-    container_name   = "orleans-silo"
+    container_name   = local.aws_ecs_container_name
     container_port   = 80
   }
 
