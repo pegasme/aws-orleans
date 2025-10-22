@@ -22,6 +22,14 @@ locals {
   account_id = data.aws_caller_identity.current.account_id
 
   server_tag_name = "${var.name}-server"
+
+  essential_endpoints = [
+    "com.amazonaws.${var.region}.ecs",
+    "com.amazonaws.${var.region}.ecs-agent",
+    "com.amazonaws.${var.region}.ecs-telemetry",
+    "com.amazonaws.${var.region}.ecr.api",
+    "com.amazonaws.${var.region}.ecr.dkr"
+  ]
 }
 
 ################################
@@ -143,6 +151,8 @@ resource "aws_ecs_service" "adventure-server" {
     container_name   = local.aws_ecs_container_name
     container_port   = 80
   }
+
+  depends_on = [aws_lb_listener.adventure_ecs_listener]
 
   tags = {
     name = local.server_tag_name
@@ -353,6 +363,8 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
     name = aws_iam_instance_profile.adventure_ecs_node.name
   }
 
+  vpc_security_group_ids = [aws_security_group.ecs_instances_sg.id]
+
   tag_specifications {
     resource_type = "instance"
     tags = {
@@ -484,25 +496,32 @@ resource "aws_security_group" "alb_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # (Optional) Allow HTTPS if you add ACM certificate
-  # ingress {
-  #   description = "Allow HTTPS from Internet"
-  #   from_port   = 443
-  #   to_port     = 443
-  #   protocol    = "tcp"
-  #   cidr_blocks = ["0.0.0.0/0"]
-  # }
-
-  # --- Outbound Rules ---
-  #egress {
-  #   description      = "Allow traffic to ECS instances"
-  #  from_port        = 80
-  #   to_port          = 80
-  #   protocol         = "tcp"
-  #   security_groups  = [aws_security_group.ecs_instances_sg.id]
-  # }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
   tags = {
     Name = "adventure-alb-sg"
+  }
+}
+
+resource "aws_security_group" "vpc_endpoints" {
+  name   = "adventure-vpc-endpoints-sg"
+  vpc_id = var.vpc_id
+  ingress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs_instances_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
