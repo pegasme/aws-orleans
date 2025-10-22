@@ -12,7 +12,6 @@ module "dynamodb" {
   source = "./modules/dynamodb"
   name   = local.project_name
   region = var.region
-  ecs_instance_role_name = module.backend.ecs_instance_role_name
 }
 
 module "gw" {
@@ -43,4 +42,9 @@ module "backend" {
   name  = local.project_name
   default_client_image_url = "${module.repository.repository_url}:client"
   default_server_image_url = "${module.repository.repository_url}:server"
+  vpc_id = module.vpc.vpc_id
+  public_subnet_ids = module.vpc.public_subnet_ids
+  private_subnet_ids = module.vpc.private_subnet_ids
+  dynamodb_table_arn = module.dynamodb.cluster_table_arn
+  dynamodb_table_grain_arn = module.dynamodb.grain_table_arn
 }

@@ -11,6 +11,7 @@ using Serilog.Formatting.Compact;
 using AdventureGrainInterfaces;
 using AdventureGrains;
 using AWSECS.ContainerMetadata.Extensions;
+using Microsoft.CodeAnalysis.Options;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -59,10 +60,11 @@ try
         }
 
         siloBuilder
+            .ConfigureEndpoints(siloPort: 11111, gatewayPort: 30000)
             .Configure<ClusterOptions>(options =>
             {
-                options.ClusterId = "dev";
-                options.ServiceId = "OrleansBasics";
+                options.ClusterId = builder.Configuration["ORLEANS_CLUSTER_ID"] ?? "dev";
+                options.ServiceId = builder.Configuration["ORLEANS_SERVICE_ID"] ?? "AdventureApp";
             })
             .ConfigureLogging(logging => logging.AddConsole());
     });

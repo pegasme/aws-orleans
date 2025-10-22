@@ -122,38 +122,8 @@ resource "aws_cloudwatch_log_group" "adventure_lambda_logging" {
 # ECS Service
 ###############
 
-resource "aws_vpc" "adventure-server-vpc" {
- cidr_block           = var.vpc_cidr
- 
- tags = {
-   name = local.server_tag_name
- }
-}
-
-# Public subnets (for NAT & ALB)
-resource "aws_subnet" "public" {
-  count                   = 2
-  vpc_id                  = aws_vpc.adventure-server-vpc.id
-  cidr_block              = cidrsubnet(aws_vpc.adventure-server-vpc.cidr_block, 8, count.index)
-  map_public_ip_on_launch = true
-  availability_zone       = data.aws_availability_zones.available.names[count.index]
-
-  tags = { Name = "ecs-public-${count.index}" }
-}
-
-# Private subnets (for ECS instances)
-resource "aws_subnet" "private" {
-  count                   = 2
-  vpc_id                  = aws_vpc.adventure-server-vpc.id
-  cidr_block              = cidrsubnet(aws_vpc.adventure-server-vpc.cidr_block, 8, count.index + 10)
-  map_public_ip_on_launch = false
-  availability_zone       = data.aws_availability_zones.available.names[count.index]
-
-  tags = { Name = "ecs-private-${count.index}" }
-}
-
 resource "aws_internet_gateway" "internet_gateway" {
- vpc_id = aws_vpc.adventure-server-vpc.id
+ vpc_id = var.vpc_id
  tags = {
    Name = "${local.aws_ecs_service_name}-ig"
  }
@@ -166,12 +136,12 @@ resource "aws_eip" "nat" {
 
 resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public[0].id
+  subnet_id     = var.public_subnet_ids[0]
   tags          = { Name = "ecs-nat" }
 }
 
 resource "aws_route_table" "public_route_table" {
- vpc_id = aws_vpc.adventure-server-vpc.id
+ vpc_id = var.vpc_id
  route {
    cidr_block = "0.0.0.0/0"
    gateway_id = aws_internet_gateway.internet_gateway.id
@@ -183,12 +153,12 @@ resource "aws_route_table" "public_route_table" {
 
 resource "aws_route_table_association" "route_table_association" {
   count          = 2
-  subnet_id      = aws_subnet.public[count.index].id
+  subnet_id      = var.public_subnet_ids[count.index]
   route_table_id = aws_route_table.public_route_table.id
 }
 
 resource "aws_route_table" "private" {
-  vpc_id = aws_vpc.adventure-server-vpc.id
+  vpc_id = var.vpc_id
   route {
     cidr_block     = "0.0.0.0/0"
     nat_gateway_id = aws_nat_gateway.nat.id
@@ -198,7 +168,7 @@ resource "aws_route_table" "private" {
 
 resource "aws_route_table_association" "private_assoc" {
   count          = 2
-  subnet_id      = aws_subnet.private[count.index].id
+  subnet_id      = var.private_subnet_ids[count.index]
   route_table_id = aws_route_table.private.id
 }
 
@@ -207,7 +177,7 @@ resource "aws_route_table_association" "private_assoc" {
 ################
 resource "aws_security_group" "adventure_server_security_group" {
  name   = "${local.aws_ecs_service_name}-sg"
- vpc_id = aws_vpc.adventure-server-vpc.id
+ vpc_id = var.vpc_id
 
  ingress {
     from_port       = 80
@@ -322,7 +292,7 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
 
 resource "aws_autoscaling_group" "adventure_server_ecs_asg" {
  name                      = "${local.aws_ecs_service_name}-asg"
- vpc_zone_identifier       = aws_subnet.private[*].id
+ vpc_zone_identifier       = var.private_subnet_ids
  desired_capacity          = 2
  max_size                  = 2
  min_size                  = 1
@@ -396,22 +366,14 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
     essential = true
     memory    = 512
     portMappings = [
-    {
-      containerPort: 11111,
-      hostPort: 11111,
-      protocol: "tcp"
-    },
-    {
-      containerPort: 30000,
-      hostPort: 30000,
-      protocol: "tcp"
-    }
+      { "containerPort": 80, "hostPort": 80 }
     ],
     environment = [
-      {
-        name  = "ENVIRONMENT"
-        value = "Production"
-      }
+      { name  = "ENVIRONMENT", value = "Production" },
+      { name  = "ASPNETCORE_ENVIRONMENT", value = "Production" },
+      { "name": "ORLEANS_CLUSTER_ID", "value": "ecs-orleans-cluster" },
+      { "name": "ORLEANS_SERVICE_ID", "value": "ecs-orleans-service" },
+      { "name": "AWS_REGION", "value": "us-east-1" }
     ]
   }])
 }
@@ -441,7 +403,7 @@ resource "aws_ecs_service" "adventure-server" {
 # ------------------------------------------------
 
 resource "aws_security_group" "alb" {
-  vpc_id = aws_vpc.adventure-server-vpc.id
+  vpc_id = var.vpc_id
   name   = "alb-sg"
 
   ingress {
@@ -466,14 +428,14 @@ resource "aws_lb" "adventure_ecs_lb" {
   internal           = true
   load_balancer_type = "application"
   security_groups    = [aws_security_group.adventure_server_security_group.id]
-  subnets            = aws_subnet.public[*].id
+  subnets            = var.public_subnet_ids
 }
 
 resource "aws_lb_target_group" "adventure_ecs_tg" {
   name     = "adventure-ecs-tg"
   port     = 80
   protocol = "HTTP"
-  vpc_id   = aws_vpc.adventure-server-vpc.id
+  vpc_id   = var.vpc_id
   target_type = "instance"
 }
 
@@ -527,6 +489,43 @@ resource "aws_iam_policy" "adventure_ecs_cloudwatch_policy" {
 resource "aws_iam_role_policy_attachment" "adventure_ecs_attach_cloudwatch" {
   role       = aws_iam_role.adventure_ecs_node_role.name
   policy_arn = aws_iam_policy.adventure_ecs_cloudwatch_policy.arn
+}
+
+# ----------------------------------------------------
+# IAM Policy: ECS EC2 Access to DynamoDb
+# ----------------------------------------------------
+
+resource "aws_iam_policy" "ecs_orleans_dynamodb_policy" {
+  name        = "ecs-orleans-dynamodb-access"
+  description = "Allow ECS (Orleans) to use DynamoDB for clustering and storage"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Scan",
+          "dynamodb:Query",
+          "dynamodb:DescribeTable",
+          "dynamodb:CreateTable"
+        ],
+        Resource = [
+          var.dynamodb_table_arn,
+          var.dynamodb_table_grain_arn
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_attach_orleans_dynamodb" {
+  role       = aws_iam_role.adventure_ecs_node_role.name
+  policy_arn = aws_iam_policy.ecs_orleans_dynamodb_policy.arn
 }
 
 
