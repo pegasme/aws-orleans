@@ -272,10 +272,10 @@ resource "aws_iam_role_policy_attachment" "ecs_attach_orleans_dynamodb" {
 
 resource "aws_lb" "adventure_ecs_lb" {
   name               = "adventure-ecs-lb"
-  internal           = true
+  internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.ecs_instances_sg.id]
-  subnets            = var.private_subnet_ids
+  security_groups    = [aws_security_group.alb_sg.id]
+  subnets            = var.public_subnet_ids
 }
 
 resource "aws_lb_target_group" "adventure_ecs_tg" {
@@ -302,7 +302,7 @@ resource "aws_lb_listener" "adventure_ecs_listener" {
 resource "aws_ecs_task_definition" "adventure_server_task_definition" {
   family             = local.aws_task_def_name
   cpu                = 256
-  memory             = "512"
+  memory             = 512
   network_mode       = "bridge"
   execution_role_arn = "arn:aws:iam::${local.account_id}:role/ecsTaskExecutionRole"
 
@@ -339,10 +339,6 @@ resource "aws_autoscaling_group" "adventure_server_ecs_asg" {
   desired_capacity    = 1
   max_size            = 2
   min_size            = 1
-
-  lifecycle {
-    create_before_destroy = true
-  }
 
   launch_template {
     id      = aws_launch_template.adventure_server_ecs_lt.id
@@ -440,7 +436,9 @@ resource "aws_ecs_cluster_capacity_providers" "adventure_capacity_providers" {
   }
 }
 
+# -------------------------
 # Security groups
+# -------------------------
 resource "aws_security_group" "lambda_sg" {
   name        = "${local.lambda_client_function_name}-sg"
   description = "Security group for Lambda in VPC"
@@ -468,7 +466,7 @@ resource "aws_security_group" "ecs_instances_sg" {
 
   # --- Inbound Rules ---
   ingress {
-    description     = "Allow traffic from ALB to ECS tasks"
+    description     = "Allow traffic from ALB only"
     from_port       = 80
     to_port         = 80
     protocol        = "tcp"
@@ -515,20 +513,12 @@ resource "aws_security_group" "alb_sg" {
   }
 }
 
-resource "aws_security_group" "vpc_endpoints" {
-  name   = "adventure-vpc-endpoints-sg"
-  vpc_id = var.vpc_id
-  ingress {
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ecs_instances_sg.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+resource "aws_vpc_endpoint" "private_links" {
+  for_each            = toset(local.essential_endpoints)
+  vpc_id              = var.vpc_id
+  service_name        = each.value
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = var.private_subnet_ids
+  private_dns_enabled = true
+  security_group_ids  = [aws_security_group.ecs_instances_sg.id]
 }
