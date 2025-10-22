@@ -8,20 +8,20 @@ data "aws_ssm_parameter" "ecs_node_ami" {
 data "aws_availability_zones" "available" {}
 
 locals {
-    lambda_role_name            = "${var.name}-lambda-role"
-    lambda_client_function_name = "${var.name}-client"
+  lambda_role_name            = "${var.name}-lambda-role"
+  lambda_client_function_name = "${var.name}-client"
 
-    api_gateway_name = "${var.name}-api-gateway"
+  api_gateway_name = "${var.name}-api-gateway"
 
-    aws_ecs_service_name   = "${var.name}-ecs-service"
-    aws_ecs_cluster_name   = "${var.name}-ecs-cluster"
-    aws_task_def_name      = "${var.name}-server-task-definition"
-    aws_ecs_keyapir        = "${var.name}-ecs-keypair" // Created manually
-    aws_ecs_container_name = "${var.name}-server-container"
+  aws_ecs_service_name   = "${var.name}-ecs-service"
+  aws_ecs_cluster_name   = "${var.name}-ecs-cluster"
+  aws_task_def_name      = "${var.name}-server-task-definition"
+  aws_ecs_keyapir        = "${var.name}-ecs-keypair" // Created manually
+  aws_ecs_container_name = "${var.name}-server-container"
 
-    account_id = data.aws_caller_identity.current.account_id
-    
-    server_tag_name = "${var.name}-server"
+  account_id = data.aws_caller_identity.current.account_id
+
+  server_tag_name = "${var.name}-server"
 }
 
 ################################
@@ -29,12 +29,12 @@ locals {
 ################################
 
 resource "aws_apigatewayv2_api" "adventure_api" {
-  name        = local.api_gateway_name
-  description = "Backend API Gateway"
+  name          = local.api_gateway_name
+  description   = "Backend API Gateway"
   protocol_type = "HTTP"
 
   cors_configuration {
-    allow_origins = ["*"]                   # Replace with your domain for security
+    allow_origins = ["*"] # Replace with your domain for security
     allow_methods = ["GET", "POST", "OPTIONS"]
     allow_headers = ["content-type", "authorization"]
   }
@@ -99,24 +99,19 @@ resource "aws_iam_role_policy_attachment" "adventure_api_policy" {
 }
 
 resource "aws_lambda_function" "adventure_api" {
-    function_name    = local.lambda_client_function_name
-    package_type     = "Image"
-    role             = aws_iam_role.adventure_api_role.arn
-    image_uri        = var.default_client_image_url
-    timeout       = 30
-    memory_size   = 256
+  function_name = local.lambda_client_function_name
+  package_type  = "Image"
+  role          = aws_iam_role.adventure_api_role.arn
+  image_uri     = var.default_client_image_url
+  timeout       = 30
+  memory_size   = 256
 
-    vpc_config {
-      subnet_ids = var.private_subnet_ids
-      security_group_ids = [aws_security_group.lambda_sg.id]
+  environment {
+    variables = {
+      ENVIRONMENT            = "production"
+      ASPNETCORE_ENVIRONMENT = "Production"
     }
-
-    environment {
-      variables = {
-        ENVIRONMENT = "production"
-        ASPNETCORE_ENVIRONMENT = "Production"
-      }
-    }
+  }
 }
 
 resource "aws_cloudwatch_log_group" "adventure_lambda_logging" {
@@ -133,7 +128,7 @@ resource "aws_cloudwatch_log_group" "adventure_lambda_logging" {
 # -------------------------
 
 resource "aws_ecs_cluster" "adventure_cluster" {
- name = local.aws_ecs_cluster_name
+  name = local.aws_ecs_cluster_name
 }
 
 resource "aws_ecs_service" "adventure-server" {
@@ -150,8 +145,8 @@ resource "aws_ecs_service" "adventure-server" {
   }
 
   tags = {
-   name = local.server_tag_name
- }
+    name = local.server_tag_name
+  }
 }
 
 # -------------------------
@@ -159,7 +154,7 @@ resource "aws_ecs_service" "adventure-server" {
 # -------------------------
 
 resource "aws_iam_role" "adventure_ecs_node_role" {
-  name_prefix        = "${local.aws_ecs_service_name}-role"
+  name_prefix = "${local.aws_ecs_service_name}-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -299,8 +294,8 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
   execution_role_arn = "arn:aws:iam::${local.account_id}:role/ecsTaskExecutionRole"
 
   runtime_platform {
-   operating_system_family = "LINUX"
-   cpu_architecture        = "X86_64"
+    operating_system_family = "LINUX"
+    cpu_architecture        = "X86_64"
   }
 
   container_definitions = jsonencode([{
@@ -309,14 +304,14 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
     essential = true
     memory    = 512
     portMappings = [
-      { "containerPort": 80, "hostPort": 80 }
+      { "containerPort" : 80, "hostPort" : 80 }
     ],
     environment = [
-      { "name": "ENVIRONMENT", "value": "Production" },
-      { "name":"ASPNETCORE_ENVIRONMENT", "value": "Production" },
-      { "name": "ORLEANS_CLUSTER_ID", "value": "ecs-orleans-cluster" },
-      { "name": "ORLEANS_SERVICE_ID", "value": "ecs-orleans-service" },
-      { "name": "AWS_REGION", "value": "us-east-1" }
+      { "name" : "ENVIRONMENT", "value" : "Production" },
+      { "name" : "ASPNETCORE_ENVIRONMENT", "value" : "Production" },
+      { "name" : "ORLEANS_CLUSTER_ID", "value" : "ecs-orleans-cluster" },
+      { "name" : "ORLEANS_SERVICE_ID", "value" : "ecs-orleans-service" },
+      { "name" : "AWS_REGION", "value" : "us-east-1" }
     ]
   }])
 }
@@ -326,46 +321,46 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
 # -------------------------
 
 resource "aws_autoscaling_group" "adventure_server_ecs_asg" {
- name                      = "${local.aws_ecs_service_name}-asg"
- vpc_zone_identifier       = var.private_subnet_ids
- desired_capacity          = 1
- max_size                  = 2
- min_size                  = 1
- 
- lifecycle {
+  name                = "${local.aws_ecs_service_name}-asg"
+  vpc_zone_identifier = var.private_subnet_ids
+  desired_capacity    = 1
+  max_size            = 2
+  min_size            = 1
+
+  lifecycle {
     create_before_destroy = true
   }
 
- launch_template {
-   id      = aws_launch_template.adventure_server_ecs_lt.id
-   version = "$Latest"
- }
+  launch_template {
+    id      = aws_launch_template.adventure_server_ecs_lt.id
+    version = "$Latest"
+  }
 
- tag {
-   key                 = "AmazonECSManaged"
-   value               = true
-   propagate_at_launch = true
- }
+  tag {
+    key                 = "AmazonECSManaged"
+    value               = true
+    propagate_at_launch = true
+  }
 }
 
 resource "aws_launch_template" "adventure_server_ecs_lt" {
- name_prefix   = "${local.aws_ecs_service_name}-tmpl"
- image_id      = data.aws_ssm_parameter.ecs_node_ami.value
- instance_type = "t3.micro"
- key_name      = local.aws_ecs_keyapir
- 
- iam_instance_profile { 
-    name = aws_iam_instance_profile.adventure_ecs_node.name 
- }
+  name_prefix   = "${local.aws_ecs_service_name}-tmpl"
+  image_id      = data.aws_ssm_parameter.ecs_node_ami.value
+  instance_type = "t3.micro"
+  key_name      = local.aws_ecs_keyapir
 
- tag_specifications {
-   resource_type = "instance"
-   tags = {
-     Name = "ecs-instance"
-   }
- }
+  iam_instance_profile {
+    name = aws_iam_instance_profile.adventure_ecs_node.name
+  }
 
- user_data = base64encode(<<-EOF
+  tag_specifications {
+    resource_type = "instance"
+    tags = {
+      Name = "ecs-instance"
+    }
+  }
+
+  user_data = base64encode(<<-EOF
       #!/bin/bash
       echo ECS_CLUSTER=${aws_ecs_cluster.adventure_cluster.name} >> /etc/ecs/ecs.config;
 
@@ -392,7 +387,7 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
     systemctl enable amazon-cloudwatch-agent
     systemctl start amazon-cloudwatch-agent
     EOF
-      )
+  )
 }
 
 # -------------------------
@@ -400,30 +395,30 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
 # -------------------------
 
 resource "aws_ecs_capacity_provider" "adventure_ecs_capacity_provider" {
- name = "${local.aws_ecs_service_name}-cp"
+  name = "${local.aws_ecs_service_name}-cp"
 
- auto_scaling_group_provider {
-   auto_scaling_group_arn = aws_autoscaling_group.adventure_server_ecs_asg.arn
+  auto_scaling_group_provider {
+    auto_scaling_group_arn = aws_autoscaling_group.adventure_server_ecs_asg.arn
 
-   managed_scaling {
-     maximum_scaling_step_size = 2
-     minimum_scaling_step_size = 1
-     status                    = "ENABLED"
-     target_capacity           = 80
-   }
- }
+    managed_scaling {
+      maximum_scaling_step_size = 2
+      minimum_scaling_step_size = 1
+      status                    = "ENABLED"
+      target_capacity           = 80
+    }
+  }
 }
 
 resource "aws_ecs_cluster_capacity_providers" "adventure_capacity_providers" {
- cluster_name = aws_ecs_cluster.adventure_cluster.name
+  cluster_name = aws_ecs_cluster.adventure_cluster.name
 
- capacity_providers = [aws_ecs_capacity_provider.adventure_ecs_capacity_provider.name]
+  capacity_providers = [aws_ecs_capacity_provider.adventure_ecs_capacity_provider.name]
 
- default_capacity_provider_strategy {
-   base              = 1
-   weight            = 1
-   capacity_provider = aws_ecs_capacity_provider.adventure_ecs_capacity_provider.name
- }
+  default_capacity_provider_strategy {
+    base              = 1
+    weight            = 1
+    capacity_provider = aws_ecs_capacity_provider.adventure_ecs_capacity_provider.name
+  }
 }
 
 # Security groups
@@ -437,11 +432,11 @@ resource "aws_security_group" "lambda_sg" {
 
   # --- Outbound Rules ---
   egress {
-   description      = "Allow HTTP to ALB"
-    from_port        = 80
-    to_port          = 80
-    protocol         = "tcp"
-    security_groups  = [
+    description = "Allow HTTP to ALB"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    security_groups = [
       aws_security_group.alb_sg.id
     ]
   }
@@ -454,11 +449,11 @@ resource "aws_security_group" "ecs_instances_sg" {
 
   # --- Inbound Rules ---
   ingress {
-    description      = "Allow traffic from ALB to ECS tasks"
-    from_port        = 80
-    to_port          = 80
-    protocol         = "tcp"
-    security_groups  = [aws_security_group.alb_sg.id]
+    description     = "Allow traffic from ALB to ECS tasks"
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
   }
 
   # --- Outbound Rules ---
@@ -500,12 +495,12 @@ resource "aws_security_group" "alb_sg" {
 
   # --- Outbound Rules ---
   #egress {
- #   description      = "Allow traffic to ECS instances"
+  #   description      = "Allow traffic to ECS instances"
   #  from_port        = 80
- #   to_port          = 80
- #   protocol         = "tcp"
- #   security_groups  = [aws_security_group.ecs_instances_sg.id]
- # }
+  #   to_port          = 80
+  #   protocol         = "tcp"
+  #   security_groups  = [aws_security_group.ecs_instances_sg.id]
+  # }
 
   tags = {
     Name = "adventure-alb-sg"
