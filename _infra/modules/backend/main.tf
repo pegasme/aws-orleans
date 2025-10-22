@@ -106,6 +106,11 @@ resource "aws_lambda_function" "adventure_api" {
     timeout       = 30
     memory_size   = 256
 
+    vpc_config {
+      subnet_ids = var.private_subnet_ids
+      security_group_ids = [aws_security_group.lambda_sg.id]
+    }
+
     environment {
       variables = {
         ENVIRONMENT = "production"
@@ -123,25 +128,6 @@ resource "aws_cloudwatch_log_group" "adventure_lambda_logging" {
 # ECS Service
 ###############
 
-resource "aws_internet_gateway" "internet_gateway" {
- vpc_id = var.vpc_id
- tags = {
-   Name = "${local.aws_ecs_service_name}-ig"
- }
-}
-
-resource "aws_route_table" "public_route_table" {
- vpc_id = var.vpc_id
- route {
-   cidr_block = "0.0.0.0/0"
-   gateway_id = aws_internet_gateway.internet_gateway.id
- }
- tags = {
-   Name = "${local.aws_ecs_service_name}-rt"
- }
-}
-
-
 # -------------------------
 # ECS Cluster
 # -------------------------
@@ -156,6 +142,12 @@ resource "aws_ecs_service" "adventure-server" {
   task_definition = aws_ecs_task_definition.adventure_server_task_definition.arn
   cluster         = aws_ecs_cluster.adventure_cluster.id
   launch_type     = "EC2"
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.adventure_ecs_tg.arn
+    container_name   = local.aws_ecs_container_name
+    container_port   = 80
+  }
 
   tags = {
    name = local.server_tag_name
@@ -270,6 +262,31 @@ resource "aws_iam_role_policy_attachment" "ecs_attach_orleans_dynamodb" {
 # Load balancer 
 # ------------------------------------------------
 
+resource "aws_lb" "adventure_ecs_lb" {
+  name               = "adventure-ecs-lb"
+  internal           = true
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.ecs_instances_sg.id]
+  subnets            = var.private_subnet_ids
+}
+
+resource "aws_lb_target_group" "adventure_ecs_tg" {
+  name     = "adventure-ecs-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = var.vpc_id
+}
+
+resource "aws_lb_listener" "adventure_ecs_listener" {
+  load_balancer_arn = aws_lb.adventure_ecs_lb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.adventure_ecs_tg.arn
+  }
+}
 
 # ------------------------------------------------
 # ECS TASK DEFINITIONs
@@ -407,4 +424,90 @@ resource "aws_ecs_cluster_capacity_providers" "adventure_capacity_providers" {
    weight            = 1
    capacity_provider = aws_ecs_capacity_provider.adventure_ecs_capacity_provider.name
  }
+}
+
+# Security groups
+resource "aws_security_group" "lambda_sg" {
+  name        = "${local.lambda_client_function_name}-sg"
+  description = "Security group for Lambda in VPC"
+  vpc_id      = var.vpc_id
+
+  # --- Inbound Rules ---
+  # Lambda doesn’t need inbound — it’s invoked by API Gateway
+
+  # --- Outbound Rules ---
+  egress {
+   description      = "Allow HTTP to ALB"
+    from_port        = 80
+    to_port          = 80
+    protocol         = "tcp"
+    security_groups  = [
+      aws_security_group.alb_sg.id
+    ]
+  }
+}
+
+resource "aws_security_group" "ecs_instances_sg" {
+  name        = "adventure-ecs-sg"
+  description = "Security group for ECS EC2 instances"
+  vpc_id      = var.vpc_id
+
+  # --- Inbound Rules ---
+  ingress {
+    description      = "Allow traffic from ALB to ECS tasks"
+    from_port        = 80
+    to_port          = 80
+    protocol         = "tcp"
+    security_groups  = [aws_security_group.alb_sg.id]
+  }
+
+  # --- Outbound Rules ---
+  egress {
+    description = "Allow all outbound traffic (for updates, ECR pulls, etc.)"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    name = local.server_tag_name
+  }
+}
+
+resource "aws_security_group" "alb_sg" {
+  name        = "adventure-server-alb-sg"
+  description = "Security group for ALB"
+  vpc_id      = var.vpc_id
+
+  # --- Inbound Rules ---
+  ingress {
+    description = "Allow HTTP from Internet"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # (Optional) Allow HTTPS if you add ACM certificate
+  # ingress {
+  #   description = "Allow HTTPS from Internet"
+  #   from_port   = 443
+  #   to_port     = 443
+  #   protocol    = "tcp"
+  #   cidr_blocks = ["0.0.0.0/0"]
+  # }
+
+  # --- Outbound Rules ---
+  #egress {
+ #   description      = "Allow traffic to ECS instances"
+  #  from_port        = 80
+ #   to_port          = 80
+ #   protocol         = "tcp"
+ #   security_groups  = [aws_security_group.ecs_instances_sg.id]
+ # }
+
+  tags = {
+    Name = "adventure-alb-sg"
+  }
 }
