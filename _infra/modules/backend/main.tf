@@ -512,13 +512,3 @@ resource "aws_security_group" "alb_sg" {
     Name = "adventure-alb-sg"
   }
 }
-
-resource "aws_vpc_endpoint" "private_links" {
-  for_each            = toset(local.essential_endpoints)
-  vpc_id              = var.vpc_id
-  service_name        = each.value
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = var.private_subnet_ids
-  private_dns_enabled = true
-  security_group_ids  = [aws_security_group.ecs_instances_sg.id]
-}
