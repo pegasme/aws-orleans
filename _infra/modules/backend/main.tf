@@ -152,7 +152,10 @@ resource "aws_ecs_service" "adventure-server" {
     container_port   = 80
   }
 
-  depends_on = [aws_lb_listener.adventure_ecs_listener]
+  depends_on = [
+    aws_autoscaling_group.adventure_server_ecs_asg,
+    aws_lb_listener.adventure_ecs_listener
+  ]
 
   tags = {
     name = local.server_tag_name
@@ -363,7 +366,11 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
     name = aws_iam_instance_profile.adventure_ecs_node.name
   }
 
-  vpc_security_group_ids = [aws_security_group.ecs_instances_sg.id]
+  network_interfaces {
+    associate_public_ip_address = false
+    security_groups             = [aws_security_group.ecs_instances_sg.id]
+    subnet_id                   = var.private_subnet_ids[0]
+  }
 
   tag_specifications {
     resource_type = "instance"
