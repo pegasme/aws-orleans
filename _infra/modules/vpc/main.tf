@@ -97,7 +97,7 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_route_table_association" "private_assoc" {
-  for_each       = toset([aws_subnet.private_subnets[*].id])
-  subnet_id      = each.value
+  count          =        2
+  subnet_id      = aws_subnet.private_subnets[count.index].id
   route_table_id = aws_route_table.private.id
 }
