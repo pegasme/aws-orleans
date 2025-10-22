@@ -130,17 +130,6 @@ resource "aws_internet_gateway" "internet_gateway" {
  }
 }
 
-# NAT Gateway setup
-resource "aws_eip" "nat" {
-  tags   = { Name = "ecs-nat-eip" }
-}
-
-resource "aws_nat_gateway" "nat" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = var.public_subnet_ids[0]
-  tags          = { Name = "ecs-nat" }
-}
-
 resource "aws_route_table" "public_route_table" {
  vpc_id = var.vpc_id
  route {
@@ -197,6 +186,26 @@ resource "aws_security_group" "adventure_server_security_group" {
   tags = {
    Name = "${local.aws_ecs_service_name}-private-sg"
  }
+}
+
+# Lambda SG to access ECS
+resource "aws_security_group" "lambda_sg" {
+  name   = "lambda-sg"
+  vpc_id = var.vpc_id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.adventure_server_security_group.id]
+  }
 }
 
 ###############
@@ -294,7 +303,7 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
 resource "aws_autoscaling_group" "adventure_server_ecs_asg" {
  name                      = "${local.aws_ecs_service_name}-asg"
  vpc_zone_identifier       = var.private_subnet_ids
- desired_capacity          = 2
+ desired_capacity          = 1
  max_size                  = 2
  min_size                  = 1
  
@@ -346,14 +355,14 @@ resource "aws_ecs_cluster_capacity_providers" "adventure_capacity_providers" {
 }
 
 # ------------------------------------------------
-# ECS TASK DEFINITION
+# ECS TASK DEFINITIONs
 # ------------------------------------------------
 
 resource "aws_ecs_task_definition" "adventure_server_task_definition" {
   family             = local.aws_task_def_name
   cpu                = 256
   memory             = "512"
-  network_mode       = "awsvpc"
+  network_mode       = "bridge"
   execution_role_arn = "arn:aws:iam::${local.account_id}:role/ecsTaskExecutionRole"
 
   runtime_platform {
