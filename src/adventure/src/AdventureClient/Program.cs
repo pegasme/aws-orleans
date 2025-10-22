@@ -29,10 +29,33 @@ try
 
     builder.Services.AddSingleton<IPlayerService, PlayerService>();
 
-    builder.UseOrleansClient(clientBuilder =>
+    if (isDevelopment)
     {
-        clientBuilder.UseLocalhostClustering(30000, "OrleansBasics", "dev");
-    });
+        builder.UseOrleansClient(clientBuilder =>
+        {
+            clientBuilder.UseLocalhostClustering(30000, "OrleansBasics", "dev");
+        });
+    }
+    else
+    {
+        builder.UseOrleansClient(clientBuilder =>
+        {
+            clientBuilder.Configure<ClusterOptions>(options =>
+            {
+                options.ClusterId = builder.Configuration["ORLEANS_CLUSTER_ID"] ?? "dev";
+                options.ServiceId = builder.Configuration["ORLEANS_SERVICE_ID"] ?? "AdventureApp";
+            });
+
+            clientBuilder.UseDynamoDBClustering(options =>
+            {
+                options.AccessKey = builder.Configuration["AWS_ACCESS_KEY_ID"];
+                options.SecretKey = builder.Configuration["AWS_SECRET_ACCESS_KEY"];
+                options.TableName = builder.Configuration["ClusterTableName"];
+                options.Service = builder.Configuration["AWS_REGION"];
+                options.CreateIfNotExists = false;
+            });
+        });
+    }
 
     builder.Services.AddAWSLambdaHosting(LambdaEventSource.RestApi);
 
