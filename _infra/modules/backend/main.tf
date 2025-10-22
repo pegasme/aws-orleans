@@ -131,6 +131,18 @@ resource "aws_ecs_cluster" "adventure_cluster" {
  name = local.aws_ecs_cluster_name
 }
 
+resource "aws_ecs_service" "adventure-server" {
+  name            = local.aws_ecs_service_name
+  desired_count   = 1
+  task_definition = aws_ecs_task_definition.adventure_server_task_definition.arn
+  cluster         = aws_ecs_cluster.adventure_cluster.id
+  launch_type     = "EC2"
+
+  tags = {
+   name = local.server_tag_name
+ }
+}
+
 # -------------------------
 # IAM Role
 # -------------------------
@@ -233,4 +245,116 @@ resource "aws_iam_policy" "ecs_orleans_dynamodb_policy" {
 resource "aws_iam_role_policy_attachment" "ecs_attach_orleans_dynamodb" {
   role       = aws_iam_role.adventure_ecs_node_role.name
   policy_arn = aws_iam_policy.ecs_orleans_dynamodb_policy.arn
+}
+
+# ------------------------------------------------
+# Load balancer 
+# ------------------------------------------------
+
+
+# ------------------------------------------------
+# ECS TASK DEFINITIONs
+# ------------------------------------------------
+resource "aws_ecs_task_definition" "adventure_server_task_definition" {
+  family             = local.aws_task_def_name
+  cpu                = 256
+  memory             = "512"
+  network_mode       = "bridge"
+  execution_role_arn = "arn:aws:iam::${local.account_id}:role/ecsTaskExecutionRole"
+
+  runtime_platform {
+   operating_system_family = "LINUX"
+   cpu_architecture        = "X86_64"
+  }
+
+  container_definitions = jsonencode([{
+    name      = local.aws_ecs_container_name
+    image     = var.default_server_image_url
+    essential = true
+    memory    = 512
+    portMappings = [
+      { "containerPort": 80, "hostPort": 80 }
+    ],
+    environment = [
+      { name  = "ENVIRONMENT", value = "Production" },
+      { name  = "ASPNETCORE_ENVIRONMENT", value = "Production" },
+      { "name": "ORLEANS_CLUSTER_ID", "value": "ecs-orleans-cluster" },
+      { "name": "ORLEANS_SERVICE_ID", "value": "ecs-orleans-service" },
+      { "name": "AWS_REGION", "value": "us-east-1" }
+    ]
+  }])
+}
+
+# -------------------------
+# Auto Scaling Group
+# -------------------------
+
+resource "aws_autoscaling_group" "adventure_server_ecs_asg" {
+ name                      = "${local.aws_ecs_service_name}-asg"
+ vpc_zone_identifier       = var.private_subnet_ids
+ desired_capacity          = 1
+ max_size                  = 2
+ min_size                  = 1
+ 
+ lifecycle {
+    create_before_destroy = true
+  }
+
+ launch_template {
+   id      = aws_launch_template.adventure_server_ecs_lt.id
+   version = "$Latest"
+ }
+
+ tag {
+   key                 = "AmazonECSManaged"
+   value               = true
+   propagate_at_launch = true
+ }
+}
+
+resource "aws_launch_template" "adventure_server_ecs_lt" {
+ name_prefix   = "${local.aws_ecs_service_name}-tmpl"
+ image_id      = data.aws_ssm_parameter.ecs_node_ami.value
+ instance_type = "t3.micro"
+ key_name      = local.aws_ecs_keyapir
+ 
+ iam_instance_profile { 
+    name = aws_iam_instance_profile.adventure_ecs_node.name 
+ }
+
+ tag_specifications {
+   resource_type = "instance"
+   tags = {
+     Name = "ecs-instance"
+   }
+ }
+
+ user_data = base64encode(<<-EOF
+      #!/bin/bash
+      echo ECS_CLUSTER=${aws_ecs_cluster.adventure_cluster.name} >> /etc/ecs/ecs.config;
+
+      # Install CloudWatch Agent
+        yum install -y amazon-cloudwatch-agent
+        cat <<CWAGENT > /opt/aws/amazon-cloudwatch-agent/bin/config.json
+        {
+          "metrics": {
+            "append_dimensions": {
+              "AutoScalingGroupName": "$${aws:AutoScalingGroupName}",
+              "InstanceId": "$${aws:InstanceId}"
+            },
+            "metrics_collected": {
+              "mem": {
+                "measurement": ["mem_used_percent"]
+              },
+              "disk": {
+                "measurement": ["disk_used_percent"],
+                "resources": ["*"]
+              }
+            }
+          }
+          CWAGENT
+    systemctl enable amazon-cloudwatch-agent
+    systemctl start amazon-cloudwatch-agent
+    EOF
+      )
 }
