@@ -13,8 +13,28 @@ variable "default_server_image_url" {
   description = "The URI of a container image in ECS."
 }
 
-variable "vpc_cidr" {
+variable "vpc_id" {
   type        = string
-  description = "The CIDR block for the VPC."
-  default     = "10.0.0.0/16"
+  description = "Main VPC id"
+}
+
+variable "public_subnet_ids" {
+  type        = list(string)
+  description = "List of public subnet IDs"
+}
+
+variable "private_subnet_ids" {
+  type        = list(string)
+  description = "List of private subnet IDs"
+}
+
+variable "dynamodb_table_arn" {
+  type        = string
+  description = "DynamoDB Table ARN for general storage"
+}
+
+
+variable "dynamodb_table_grain_arn" {
+  type        = string
+  description = "DynamoDB Table ARN for grain storage"
 }
