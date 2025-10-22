@@ -3,6 +3,12 @@ variable "name" {
   description = "A name to associate with service."
 }
 
+variable "region" {
+  description = "The region in which to create the resources."
+  type        = string
+  default     = "us-east-1"
+}
+
 variable "default_client_image_url" {
   type        = string
   description = "The URI of a container image in Lambda."
