@@ -123,6 +123,25 @@ resource "aws_cloudwatch_log_group" "adventure_lambda_logging" {
 # ECS Service
 ###############
 
+resource "aws_internet_gateway" "internet_gateway" {
+ vpc_id = var.vpc_id
+ tags = {
+   Name = "${local.aws_ecs_service_name}-ig"
+ }
+}
+
+resource "aws_route_table" "public_route_table" {
+ vpc_id = var.vpc_id
+ route {
+   cidr_block = "0.0.0.0/0"
+   gateway_id = aws_internet_gateway.internet_gateway.id
+ }
+ tags = {
+   Name = "${local.aws_ecs_service_name}-rt"
+ }
+}
+
+
 # -------------------------
 # ECS Cluster
 # -------------------------
@@ -276,8 +295,8 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
       { "containerPort": 80, "hostPort": 80 }
     ],
     environment = [
-      { name  = "ENVIRONMENT", value = "Production" },
-      { name  = "ASPNETCORE_ENVIRONMENT", value = "Production" },
+      { "name": "ENVIRONMENT", "value": "Production" },
+      { "name":"ASPNETCORE_ENVIRONMENT", "value": "Production" },
       { "name": "ORLEANS_CLUSTER_ID", "value": "ecs-orleans-cluster" },
       { "name": "ORLEANS_SERVICE_ID", "value": "ecs-orleans-service" },
       { "name": "AWS_REGION", "value": "us-east-1" }
@@ -357,4 +376,35 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
     systemctl start amazon-cloudwatch-agent
     EOF
       )
+}
+
+# -------------------------
+# ECS Capacity Provider
+# -------------------------
+
+resource "aws_ecs_capacity_provider" "adventure_ecs_capacity_provider" {
+ name = "${local.aws_ecs_service_name}-cp"
+
+ auto_scaling_group_provider {
+   auto_scaling_group_arn = aws_autoscaling_group.adventure_server_ecs_asg.arn
+
+   managed_scaling {
+     maximum_scaling_step_size = 2
+     minimum_scaling_step_size = 1
+     status                    = "ENABLED"
+     target_capacity           = 80
+   }
+ }
+}
+
+resource "aws_ecs_cluster_capacity_providers" "adventure_capacity_providers" {
+ cluster_name = aws_ecs_cluster.adventure_cluster.name
+
+ capacity_providers = [aws_ecs_capacity_provider.adventure_ecs_capacity_provider.name]
+
+ default_capacity_provider_strategy {
+   base              = 1
+   weight            = 1
+   capacity_provider = aws_ecs_capacity_provider.adventure_ecs_capacity_provider.name
+ }
 }
