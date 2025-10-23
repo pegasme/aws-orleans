@@ -98,6 +98,35 @@ resource "aws_iam_role_policy_attachment" "adventure_api_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+resource "aws_iam_policy" "adventure_api_dynamodb_policy" {
+  name        = "Lambda client should have an eccess to DynamoDb"
+  description = "Allow Lambda client to use DynamoDB for storage"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:Scan",
+          "dynamodb:Query",
+          "dynamodb:DescribeTable",
+          "dynamodb:DescribeTimeToLive"
+        ],
+        Resource = [
+          var.dynamodb_table_arn
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "adventure_api_policy" {
+  role       = aws_iam_role.adventure_api_role.name
+  policy_arn = aws_iam_policy.adventure_api_dynamodb_policy.arn
+}
+
 resource "aws_lambda_function" "adventure_api" {
   function_name = local.lambda_client_function_name
   package_type  = "Image"
