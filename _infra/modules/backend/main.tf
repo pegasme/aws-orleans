@@ -325,6 +325,8 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
   network_mode       = "bridge"
   execution_role_arn = aws_iam_role.adventure_ecs_task_execution_role.arn
 
+  depends_on = [aws_cloudwatch_log_group.ecs_app]
+  
   runtime_platform {
     operating_system_family = "LINUX"
     cpu_architecture        = "X86_64"
@@ -341,7 +343,7 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
     logConfiguration = {
       logDriver = "awslogs"
       options = {
-        "awslogs-group"         : "/ecs/${local.aws_task_def_name}"
+        "awslogs-group"         : aws_cloudwatch_log_group.ecs_app.name,
         "awslogs-region"        : "us-east-1"
         "awslogs-stream-prefix" : "ecs",
         "awslogs-create-group"  : "true"
@@ -412,28 +414,6 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
       ECS_LOGLEVEL=debug
       ECS_ENABLE_TASK_IAM_ROLE=true
       EOF
-      # Install CloudWatch Agent
-        yum install -y amazon-cloudwatch-agent
-        cat <<CWAGENT > /opt/aws/amazon-cloudwatch-agent/bin/config.json
-        {
-          "metrics": {
-            "append_dimensions": {
-              "AutoScalingGroupName": "$${aws:AutoScalingGroupName}",
-              "InstanceId": "$${aws:InstanceId}"
-            },
-            "metrics_collected": {
-              "mem": {
-                "measurement": ["mem_used_percent"]
-              },
-              "disk": {
-                "measurement": ["disk_used_percent"],
-                "resources": ["*"]
-              }
-            }
-          }
-          CWAGENT
-    systemctl enable amazon-cloudwatch-agent
-    systemctl start amazon-cloudwatch-agent
     EOT
   )
 }
