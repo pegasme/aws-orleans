@@ -22,14 +22,6 @@ locals {
   account_id = data.aws_caller_identity.current.account_id
 
   server_tag_name = "${var.name}-server"
-
-  essential_endpoints = [
-    "com.amazonaws.${var.region}.ecs",
-    "com.amazonaws.${var.region}.ecs-agent",
-    "com.amazonaws.${var.region}.ecs-telemetry",
-    "com.amazonaws.${var.region}.ecr.api",
-    "com.amazonaws.${var.region}.ecr.dkr"
-  ]
 }
 
 ################################
@@ -118,6 +110,7 @@ resource "aws_lambda_function" "adventure_api" {
     variables = {
       ENVIRONMENT            = "production"
       ASPNETCORE_ENVIRONMENT = "Production"
+
     }
   }
 }
@@ -319,6 +312,17 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
     portMappings = [
       { "containerPort" : 80, "hostPort" : 80 }
     ],
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         : "/ecs/${local.aws_task_def_name}"
+        "awslogs-region"        : "us-east-1"
+        "awslogs-stream-prefix" : "ecs",
+        "awslogs-create-group"  : "true"
+      }
+    },
+    enable_cloudwatch_logging = true,
+    cloudwatch_log_group_retention_in_days = 3,
     environment = [
       { "name" : "ENVIRONMENT", "value" : "Production" },
       { "name" : "ASPNETCORE_ENVIRONMENT", "value" : "Production" },
@@ -375,10 +379,13 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
     }
   }
 
-  user_data = base64encode(<<-EOF
+  user_data = base64encode(<<-EOT
       #!/bin/bash
-      echo ECS_CLUSTER=${aws_ecs_cluster.adventure_cluster.name} >> /etc/ecs/ecs.config;
-
+      cat <<'EOF' >> /etc/ecs/ecs.config
+      ECS_CLUSTER=${aws_ecs_cluster.adventure_cluster.name}
+      ECS_LOGLEVEL=debug
+      ECS_ENABLE_TASK_IAM_ROLE=true
+      EOF
       # Install CloudWatch Agent
         yum install -y amazon-cloudwatch-agent
         cat <<CWAGENT > /opt/aws/amazon-cloudwatch-agent/bin/config.json
@@ -401,7 +408,7 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
           CWAGENT
     systemctl enable amazon-cloudwatch-agent
     systemctl start amazon-cloudwatch-agent
-    EOF
+    EOT
   )
 }
 
@@ -452,6 +459,16 @@ resource "aws_security_group" "lambda_sg" {
     description = "Allow HTTP to ALB"
     from_port   = 80
     to_port     = 80
+    protocol    = "tcp"
+    security_groups = [
+      aws_security_group.alb_sg.id
+    ]
+  }
+
+  egress {
+    description = "Allow HTTPS to ALB"
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
     security_groups = [
       aws_security_group.alb_sg.id
@@ -511,4 +528,14 @@ resource "aws_security_group" "alb_sg" {
   tags = {
     Name = "adventure-alb-sg"
   }
+}
+
+# ALB Security Group should allow Lambda ingress
+resource "aws_security_group_rule" "alb_from_lambda" {
+  type                     = "ingress"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.lambda_sg.id
+  security_group_id        = aws_security_group.alb_sg.id
 }
