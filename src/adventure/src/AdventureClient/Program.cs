@@ -29,33 +29,35 @@ try
 
     builder.Services.AddSingleton<IPlayerService, PlayerService>();
 
-    if (isDevelopment)
-    {
-        builder.UseOrleansClient(clientBuilder =>
-        {
-            clientBuilder.UseLocalhostClustering(30000, "OrleansBasics", "dev");
-        });
-    }
-    else
-    {
-        builder.UseOrleansClient(clientBuilder =>
-        {
-            clientBuilder.Configure<ClusterOptions>(options =>
-            {
-                options.ClusterId = builder.Configuration["ORLEANS_CLUSTER_ID"] ?? "dev";
-                options.ServiceId = builder.Configuration["ORLEANS_SERVICE_ID"] ?? "AdventureApp";
-            });
+    var orleansClusterId = builder.Configuration["ORLEANS_CLUSTER_ID"] ?? throw new Exception("ORLEANS_CLUSTER_ID configuration is missing");
+    Log.Information($"Using Orleans Cluster: {orleansClusterId}"); 
 
+    var orleansServiceId = builder.Configuration["ORLEANS_SERVICE_ID"] ?? throw new Exception("ORLEANS_SERVICE_ID configuration is missing");
+    Log.Information($"Using Orleans Service: {orleansServiceId}");
+
+    builder.UseOrleansClient(clientBuilder =>
+    {
+        clientBuilder.Configure<ClusterOptions>(options =>
+                {
+                    options.ClusterId = orleansClusterId;
+                    options.ServiceId = orleansServiceId;
+                });
+
+        if (isDevelopment)
+        {
+            clientBuilder.UseLocalhostClustering(30000);
+        }
+
+        else
+        {
             clientBuilder.UseDynamoDBClustering(options =>
             {
-                options.AccessKey = builder.Configuration["AWS_ACCESS_KEY_ID"];
-                options.SecretKey = builder.Configuration["AWS_SECRET_ACCESS_KEY"];
                 options.TableName = builder.Configuration["ClusterTableName"];
                 options.Service = builder.Configuration["AWS_REGION"];
                 options.CreateIfNotExists = false;
             });
-        });
-    }
+        }
+    });
 
     builder.Services.AddAWSLambdaHosting(LambdaEventSource.RestApi);
 

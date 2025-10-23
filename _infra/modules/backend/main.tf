@@ -135,16 +135,14 @@ resource "aws_lambda_function" "adventure_api" {
   timeout       = 30
   memory_size   = 256
 
-  vpc_config {
-    subnet_ids         = [var.public_subnet_ids[0], var.public_subnet_ids[1]]
-    security_group_ids = [aws_security_group.lambda_sg.id]
-  }
-
   environment {
     variables = {
       ENVIRONMENT            = "production"
       ASPNETCORE_ENVIRONMENT = "Production"
-
+      AWS_REGION             = "us-east-1"
+      ORLEANS_CLUSTER_ID     = "prod"
+      ORLEANS_SERVICE_ID     = "AdventureApp"
+      ClusterTableName       = "AdventureClusterStore"
     }
   }
 }
@@ -510,10 +508,23 @@ resource "aws_security_group" "lambda_sg" {
 
   # --- Outbound Rules ---
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow HTTP to ALB"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    security_groups = [
+      aws_security_group.alb_sg.id
+    ]
+  }
+
+  egress {
+    description = "Allow HTTPS to ALB"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    security_groups = [
+      aws_security_group.alb_sg.id
+    ]
   }
 }
 
@@ -569,14 +580,4 @@ resource "aws_security_group" "alb_sg" {
   tags = {
     Name = "adventure-alb-sg"
   }
-}
-
-# ALB Security Group should allow Lambda ingress
-resource "aws_security_group_rule" "alb_from_lambda" {
-  type                     = "ingress"
-  from_port                = 80
-  to_port                  = 80
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.lambda_sg.id
-  security_group_id        = aws_security_group.alb_sg.id
 }

@@ -29,6 +29,7 @@ module "codedeploy" {
 module "s3" {
   source       = "./modules/s3"
   bucket_name  = local.project_name
+  api_url      = module.backend.api_gateway_url
 }
 
 module "backend" {

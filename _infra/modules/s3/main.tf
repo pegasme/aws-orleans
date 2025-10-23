@@ -61,3 +61,10 @@ data "aws_iam_policy_document" "allow_access_from_web" {
     ]
   }
 }
+
+resource "aws_s3_object" "config" {
+  bucket       = aws_s3_bucket.react_app.id
+  key          = "config.json"
+  content      = jsonencode({ API_URL = var.api_url})
+  content_type = "application/json"
+}
