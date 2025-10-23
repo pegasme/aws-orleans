@@ -1,19 +1,16 @@
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+WORKDIR /app
+
 # Use the official .NET 9 SDK image to build the app
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
-WORKDIR /app
+WORKDIR /src
 
 # Copy csproj and restore as distinct layers
 COPY . .
 RUN dotnet restore
+RUN dotnet publish ./AdventureServer/AdventureServer.csproj -c Release -r linux-x64 -o /app/publish
 
-# Copy everything else and build
-COPY . ./
-RUN dotnet publish ./AdventureServer/AdventureServer.csproj -c Release -o out
-
-# Use the official .NET 9 runtime image for the final container
-FROM mcr.microsoft.com/dotnet/runtime:9.0 AS runtime
+FROM base AS final
 WORKDIR /app
-COPY --from=build /app/out ./
-
-# Run the application
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "AdventureServer.dll"]
