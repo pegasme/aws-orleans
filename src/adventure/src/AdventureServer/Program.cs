@@ -43,6 +43,15 @@ try
                 options.CreateIfNotExists = false;
             });
 
+        siloBuilder
+            .ConfigureEndpoints(siloPort: 11111, gatewayPort: 30000)
+            .Configure<ClusterOptions>(options =>
+            {
+                options.ClusterId = builder.Configuration["ORLEANS_CLUSTER_ID"] ?? "dev";
+                options.ServiceId = builder.Configuration["ORLEANS_SERVICE_ID"] ?? "AdventureApp";
+            })
+            .ConfigureLogging(logging => logging.AddConsole());
+
         if (isDevelopment)
         {
             siloBuilder.UseLocalhostClustering();
@@ -58,15 +67,6 @@ try
                 options.CreateIfNotExists = false;
             });
         }
-
-        siloBuilder
-            .ConfigureEndpoints(siloPort: 11111, gatewayPort: 30000)
-            .Configure<ClusterOptions>(options =>
-            {
-                options.ClusterId = builder.Configuration["ORLEANS_CLUSTER_ID"] ?? "dev";
-                options.ServiceId = builder.Configuration["ORLEANS_SERVICE_ID"] ?? "AdventureApp";
-            })
-            .ConfigureLogging(logging => logging.AddConsole());
     });
 
     builder.Services.AddAWSContainerMetadataService();

@@ -29,11 +29,17 @@ try
 
     builder.Services.AddSingleton<IPlayerService, PlayerService>();
 
+    var orleansClusterId = builder.Configuration["ORLEANS_CLUSTER_ID"] ?? throw new Exception("ORLEANS_CLUSTER_ID configuration is missing");
+    Log.Information($"Using Orleans Cluster: {orleansClusterId}"); 
+
+    var orleansServiceId = builder.Configuration["ORLEANS_SERVICE_ID"] ?? throw new Exception("ORLEANS_SERVICE_ID configuration is missing");
+    Log.Information($"Using Orleans Service: {orleansServiceId}");
+
     if (isDevelopment)
     {
         builder.UseOrleansClient(clientBuilder =>
         {
-            clientBuilder.UseLocalhostClustering(30000, "OrleansBasics", "dev");
+            clientBuilder.UseLocalhostClustering(30000, orleansServiceId, orleansClusterId);
         });
     }
     else
@@ -42,8 +48,8 @@ try
         {
             clientBuilder.Configure<ClusterOptions>(options =>
             {
-                options.ClusterId = builder.Configuration["ORLEANS_CLUSTER_ID"] ?? "dev";
-                options.ServiceId = builder.Configuration["ORLEANS_SERVICE_ID"] ?? "AdventureApp";
+                options.ClusterId = orleansClusterId;
+                options.ServiceId = orleansServiceId;
             });
 
             clientBuilder.UseDynamoDBClustering(options =>
