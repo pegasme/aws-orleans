@@ -35,33 +35,29 @@ try
     var orleansServiceId = builder.Configuration["ORLEANS_SERVICE_ID"] ?? throw new Exception("ORLEANS_SERVICE_ID configuration is missing");
     Log.Information($"Using Orleans Service: {orleansServiceId}");
 
-    if (isDevelopment)
+    builder.UseOrleansClient(clientBuilder =>
     {
-        builder.UseOrleansClient(clientBuilder =>
-        {
-            clientBuilder.UseLocalhostClustering(30000, orleansServiceId, orleansClusterId);
-        });
-    }
-    else
-    {
-        builder.UseOrleansClient(clientBuilder =>
-        {
-            clientBuilder.Configure<ClusterOptions>(options =>
-            {
-                options.ClusterId = orleansClusterId;
-                options.ServiceId = orleansServiceId;
-            });
+        clientBuilder.Configure<ClusterOptions>(options =>
+                {
+                    options.ClusterId = orleansClusterId;
+                    options.ServiceId = orleansServiceId;
+                });
 
+        if (isDevelopment)
+        {
+            clientBuilder.UseLocalhostClustering(30000);
+        }
+
+        else
+        {
             clientBuilder.UseDynamoDBClustering(options =>
             {
-                options.AccessKey = builder.Configuration["AWS_ACCESS_KEY_ID"];
-                options.SecretKey = builder.Configuration["AWS_SECRET_ACCESS_KEY"];
                 options.TableName = builder.Configuration["ClusterTableName"];
                 options.Service = builder.Configuration["AWS_REGION"];
                 options.CreateIfNotExists = false;
             });
-        });
-    }
+        }
+    });
 
     builder.Services.AddAWSLambdaHosting(LambdaEventSource.RestApi);
 

@@ -139,7 +139,10 @@ resource "aws_lambda_function" "adventure_api" {
     variables = {
       ENVIRONMENT            = "production"
       ASPNETCORE_ENVIRONMENT = "Production"
-
+      AWS_REGION             = "us-east-1"
+      ORLEANS_CLUSTER_ID     = "prod"
+      ORLEANS_SERVICE_ID     = "AdventureApp"
+      ClusterTableName       = "AdventureClusterStore"
     }
   }
 }
@@ -577,14 +580,4 @@ resource "aws_security_group" "alb_sg" {
   tags = {
     Name = "adventure-alb-sg"
   }
-}
-
-# ALB Security Group should allow Lambda ingress
-resource "aws_security_group_rule" "alb_from_lambda" {
-  type                     = "ingress"
-  from_port                = 80
-  to_port                  = 80
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.lambda_sg.id
-  security_group_id        = aws_security_group.alb_sg.id
 }
