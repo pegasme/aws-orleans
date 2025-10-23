@@ -137,9 +137,7 @@ resource "aws_lambda_function" "adventure_api" {
 
   environment {
     variables = {
-      ENVIRONMENT            = "production"
       ASPNETCORE_ENVIRONMENT = "Production"
-      AWS_REGION             = "us-east-1"
       ORLEANS_CLUSTER_ID     = "prod"
       ORLEANS_SERVICE_ID     = "AdventureApp"
       ClusterTableName       = "AdventureClusterStore"
@@ -566,6 +564,22 @@ resource "aws_security_group" "alb_sg" {
     description = "Allow HTTP from Internet"
     from_port   = 80
     to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Allow Orleans from Internet Gateway"
+    from_port   = 5000 
+    to_port     = 5000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Allow Orleans from Internet"
+    from_port   = 30000 
+    to_port     = 30000
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
