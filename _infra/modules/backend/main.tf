@@ -292,12 +292,38 @@ resource "aws_lb_listener" "adventure_ecs_listener" {
 # ------------------------------------------------
 # ECS TASK DEFINITIONs
 # ------------------------------------------------
+
+resource "aws_cloudwatch_log_group" "ecs_app" {
+  name              = "/ecs/${local.aws_task_def_name}"
+  retention_in_days = 3
+}
+
+resource "aws_iam_role" "adventure_ecs_task_execution_role" {
+  name = "${var.name}-server-ecsTaskExecutionRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "ecs-tasks.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "adventure_ecs_task_execution_role_policy" {
+  role       = aws_iam_role.adventure_ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
 resource "aws_ecs_task_definition" "adventure_server_task_definition" {
   family             = local.aws_task_def_name
   cpu                = 256
   memory             = 512
   network_mode       = "bridge"
-  execution_role_arn = "arn:aws:iam::${local.account_id}:role/ecsTaskExecutionRole"
+  execution_role_arn = aws_iam_role.adventure_ecs_task_execution_role.arn
 
   runtime_platform {
     operating_system_family = "LINUX"
