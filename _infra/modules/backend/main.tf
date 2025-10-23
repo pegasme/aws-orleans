@@ -240,6 +240,7 @@ resource "aws_iam_policy" "ecs_orleans_dynamodb_policy" {
           "dynamodb:PutItem",
           "dynamodb:GetItem",
           "dynamodb:UpdateItem",
+          "dynamodb:UpdateTable",
           "dynamodb:DeleteItem",
           "dynamodb:Scan",
           "dynamodb:Query",
