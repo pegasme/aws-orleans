@@ -243,12 +243,25 @@ resource "aws_iam_policy" "ecs_orleans_dynamodb_policy" {
           "dynamodb:DeleteItem",
           "dynamodb:Scan",
           "dynamodb:Query",
-          "dynamodb:DescribeTable"
+          "dynamodb:DescribeTable",
+          "dynamodb:DescribeTimeToLive"
         ],
         Resource = [
           var.dynamodb_table_arn,
           var.dynamodb_table_grain_arn
         ]
+      },
+      # CloudWatch Logs access
+      {
+        Effect   = "Allow"
+        Action   = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams",
+          "logs:DescribeLogGroups"
+        ]
+        Resource = "arn:aws:logs:us-east-1:123456789012:log-group:/ecs/*:*"
       }
     ]
   })
