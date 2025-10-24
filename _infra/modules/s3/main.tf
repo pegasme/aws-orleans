@@ -2,43 +2,8 @@ resource "aws_s3_bucket" "site" {
   bucket_prefix = var.bucket_name
 }
 
-resource "aws_s3_bucket_website_configuration" "site" {
-  bucket = aws_s3_bucket.site.id
+resource "aws_cloudfront_origin_access_identity" "oai" {}
 
-  index_document {
-    suffix = "index.html"
-  }
-
-  error_document {
-    key = "error.html"
-  }
-}
-
-resource "aws_s3_bucket_public_access_block" "site" {
-  bucket = aws_s3_bucket.site.id
-
-  block_public_acls       = false
-  block_public_policy     = false
-  ignore_public_acls      = false
-  restrict_public_buckets = false
-}
-
-resource "aws_s3_bucket_ownership_controls" "site" {
-  bucket = aws_s3_bucket.site.id
-  rule {
-    object_ownership = "BucketOwnerPreferred"
-  }
-}
-
-resource "aws_s3_bucket_acl" "site" {
-  depends_on = [
-    aws_s3_bucket_public_access_block.site,
-    aws_s3_bucket_ownership_controls.site,
-  ]
-
-  bucket = aws_s3_bucket.site.id
-  acl    = "public-read"
-}
 
 resource "aws_s3_bucket_policy" "allow_access_from_web" {
   bucket = aws_s3_bucket.site.id
@@ -48,13 +13,11 @@ resource "aws_s3_bucket_policy" "allow_access_from_web" {
 data "aws_iam_policy_document" "allow_access_from_web" {
   statement {
     principals {
-      type        = "*"
-      identifiers = ["*"]
+      type        = "AWS"
+      identifiers = [aws_cloudfront_origin_access_identity.oai.iam_arn]
     }
 
-    actions = [
-      "s3:GetObject"
-    ]
+    actions = [ "s3:GetObject"]
 
     resources = [
       "${aws_s3_bucket.site.arn}/*",
@@ -67,4 +30,42 @@ resource "aws_s3_object" "config" {
   key          = "config.json"
   content      = jsonencode({ API_URL = var.api_url})
   content_type = "application/json"
+}
+
+resource "aws_cloudfront_distribution" "spa" {
+  enabled             = true
+  is_ipv6_enabled     = true
+  default_root_object = "index.html"
+
+  default_cache_behavior {
+    target_origin_id = "s3-${aws_s3_bucket.site.id}"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD"]
+    forwarded_values { 
+      query_string = false 
+      cookies { 
+        forward = "none" 
+        } 
+    }
+  }
+
+  origin {
+    domain_name = aws_s3_bucket.site.bucket_regional_domain_name
+    origin_id   = "s3-${aws_s3_bucket.site.id}"
+
+    s3_origin_config {
+      origin_access_identity = aws_cloudfront_origin_access_identity.oai.cloudfront_access_identity_path
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
 }

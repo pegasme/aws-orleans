@@ -6,6 +6,7 @@ module "vpc" {
   source = "./modules/vpc"
   name   = local.project_name
   region = var.region
+  environment = var.environment
 }
 
 module "dynamodb" {
@@ -19,17 +20,10 @@ module "repository" {
   name   = "raven-repository"
 }
 
-module "codedeploy" {
-  source       = "./modules/codedeploy"
-  name         = local.project_name
-  github_token = var.github_token
-  github_repo  = var.github_repo_url
-}
-
 module "s3" {
   source       = "./modules/s3"
   bucket_name  = local.project_name
-  api_url      = module.backend.api_gateway_url
+  api_url      = module.backend.alb_dns_name
 }
 
 module "backend" {
@@ -40,6 +34,8 @@ module "backend" {
   vpc_id = module.vpc.vpc_id
   public_subnet_ids = module.vpc.public_subnet_ids
   private_subnet_ids = module.vpc.private_subnet_ids
-  dynamodb_table_arn = module.dynamodb.cluster_table_arn
   dynamodb_table_grain_arn = module.dynamodb.grain_table_arn
+  dynamodb_cluster_table_arn = module.dynamodb.cluster_table_arn
+  dynamodb_cluster_table_name = module.dynamodb.cluster_table_name
+  dynamodb_grain_table_name = module.dynamodb.grain_table_name
 }
