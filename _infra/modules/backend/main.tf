@@ -138,11 +138,12 @@ resource "aws_iam_role_policy_attachment" "adventure_api_dynamo_policy" {
 
 resource "aws_lambda_function" "adventure_api" {
   function_name = local.lambda_client_function_name
+  description = "Adventure Client API Lambda Function"
   package_type  = "Image"
   role          = aws_iam_role.adventure_api_role.arn
   image_uri     = var.default_client_image_url
-  timeout       = 30
-  memory_size   = 256
+  timeout       = 15
+  memory_size   = 512
 
   vpc_config {
     subnet_ids = var.public_subnet_ids
@@ -341,8 +342,6 @@ resource "aws_iam_role_policy_attachment" "adventure_ecs_task_execution_role_pol
 
 resource "aws_ecs_task_definition" "adventure_server_task_definition" {
   family             = local.aws_task_def_name
-  cpu                = 256
-  memory             = 512
   network_mode       = "bridge"
   execution_role_arn = aws_iam_role.adventure_ecs_task_execution_role.arn
 
@@ -357,7 +356,8 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
     name      = local.aws_ecs_container_name
     image     = var.default_server_image_url
     essential = true
-    memory    = 512
+    cpu       = 10
+    memory    = 1024
     portMappings = [
       { "containerPort" : 11111, "hostPort" : 11111, "protocol": "tcp" },
       { "containerPort" : 30000, "hostPort" : 30000, "protocol": "tcp" },
