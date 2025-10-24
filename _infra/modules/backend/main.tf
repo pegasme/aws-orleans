@@ -249,7 +249,7 @@ resource "aws_iam_role" "adventure_ecs_task_role" {
 
 resource "aws_iam_role_policy_attachment" "dynamo_clientcluster_policy_attach" {
   role       = aws_iam_role.adventure_ecs_task_role.name
-  policy_arn = aws_iam_policy.ecs_orleans_dynamodb_cluster_policy
+  policy_arn = aws_iam_policy.ecs_orleans_dynamodb_cluster_policy.arn
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_exec_attach_server" {
@@ -259,7 +259,7 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_attach_server" {
 
 resource "aws_iam_role_policy_attachment" "dynamo_server_grain_policyattach" {
   role       = aws_iam_role.adventure_ecs_task_role.name
-  policy_arn = aws_iam_policy.ecs_orleans_dynamodb_grain_policy
+  policy_arn = aws_iam_policy.ecs_orleans_dynamodb_grain_policy.arn
 }
 
 // run client task role
@@ -275,7 +275,7 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_attach_client" {
 
 resource "aws_iam_role_policy_attachment" "dynamo_server_cluster_policy_attach" {
   role       = aws_iam_role.ecs_client_task_role.name
-  policy_arn = aws_iam_policy.ecs_orleans_dynamodb_cluster_policy
+  policy_arn = aws_iam_policy.ecs_orleans_dynamodb_cluster_policy.arn
 }
 
 ## dynamo policies
