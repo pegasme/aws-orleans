@@ -419,9 +419,9 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
   }
 
   network_interfaces {
-    associate_public_ip_address = false
     security_groups             = [aws_security_group.ecs_instances_sg.id]
     subnet_id                   = var.public_subnet_ids[0]
+    associate_public_ip_address = true
   }
 
   tag_specifications {
