@@ -127,7 +127,7 @@ resource "aws_iam_policy" "adventure_api_services_policy" {
           "ec2:DescribeNetworkInterfaces",
           "ec2:DeleteNetworkInterface"
         ],
-        Resource = ["arn:aws:ec2:${var.region}:${data.aws_caller_identity.current.account_id}:network-interface/*"]
+        Resource = ["*"]
       }
     ]
   })
