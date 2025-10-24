@@ -53,23 +53,3 @@ variable "dynamodb_grain_table_name" {
   type        = string
   description = "DynamoDB Table name for grain storage"
 }
-variable "api_cpu" {
-  type = string
-  description = "api cpu"
-}
-
-variable "api_memory" {
-  type = string
-  description = "api memory"
-}
-
-variable "orleans_cpu" {
-  type = string
-  description = "orleans cluster cpu"
-}
-
-variable "orleans_memory" {
-  type = string
-  description = "orleans cluster memory"
-
-}

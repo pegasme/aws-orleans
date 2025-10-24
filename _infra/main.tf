@@ -38,8 +38,4 @@ module "backend" {
   dynamodb_cluster_table_arn = module.dynamodb.cluster_table_arn
   dynamodb_cluster_table_name = module.dynamodb.cluster_table_name
   dynamodb_grain_table_name = module.dynamodb.grain_table_name
-  api_cpu = var.api_cpu
-  api_memory = var.api_memory
-  orleans_cpu = var.orleans_cpu
-  orleans_memory = var.orleans_memory
 }
