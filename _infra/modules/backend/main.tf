@@ -107,7 +107,6 @@ resource "aws_iam_policy" "adventure_api_services_policy" {
     Statement = [
       {
         Effect = "Allow",
-        Name   = "DynamoDBPermissions",
         Action = [
           "dynamodb:GetItem",
           "dynamodb:Scan",
@@ -120,7 +119,6 @@ resource "aws_iam_policy" "adventure_api_services_policy" {
         ]
       },
       {
-        Name = "EC2NetworkInterfacePermissions",
         Effect = "Allow",
         Action = [
           "ec2:CreateNetworkInterface",
@@ -361,7 +359,8 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
     essential = true
     memory    = 512
     portMappings = [
-      { "containerPort" : 80, "hostPort" : 80 }
+      { "containerPort" : 11111, "hostPort" : 11111 },
+      { "containerPort" : 30000, "hostPort" : 30000 }
     ],
     logConfiguration = {
       logDriver = "awslogs"
@@ -375,7 +374,6 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
     enable_cloudwatch_logging = true,
     cloudwatch_log_group_retention_in_days = 3,
     environment = [
-      { "name" : "ENVIRONMENT", "value" : "Production" },
       { "name" : "ASPNETCORE_ENVIRONMENT", "value" : "Production" },
       { "name" : "ORLEANS_CLUSTER_ID", "value" : "ecs-orleans-cluster" },
       { "name" : "ORLEANS_SERVICE_ID", "value" : "ecs-orleans-service" },
