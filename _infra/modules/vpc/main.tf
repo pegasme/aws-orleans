@@ -69,8 +69,8 @@ resource "aws_route_table_association" "route_table_association" {
 # our orleans should have restricted access to Internet and AWS services
 resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public_subnets
-  depends_on    = [aws_internet_gateway.gw]
+  subnet_id     = aws_subnet.public_subnets[0].id
+  depends_on    = [ aws_internet_gateway.gw ]
   tags = { Name = "${local.prefix}-nat" }
 }
 
