@@ -137,7 +137,7 @@ resource "aws_lambda_function" "adventure_api" {
 
   vpc_config {
     subnet_ids = var.public_subnet_ids
-    security_group_ids = [aws_security_group.lambda_sg]
+    security_group_ids = [aws_security_group.lambda_sg.id]
   }
 
   environment {
