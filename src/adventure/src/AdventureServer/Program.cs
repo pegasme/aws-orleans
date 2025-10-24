@@ -12,6 +12,8 @@ using AdventureGrainInterfaces;
 using AdventureGrains;
 using AWSECS.ContainerMetadata.Extensions;
 using Microsoft.CodeAnalysis.Options;
+using AWSECS.ContainerMetadata.Contracts;
+using AdventureServer.Extensions;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -31,43 +33,7 @@ try
         .Enrich.FromLogContext()
         .WriteTo.Console(new CompactJsonFormatter()));
 
-    builder.UseOrleans(siloBuilder =>
-    {
-        siloBuilder.AddDynamoDBGrainStorageAsDefault(options =>
-            {
-                options.AccessKey = builder.Configuration["AWS_ACCESS_KEY_ID"];
-                options.SecretKey = builder.Configuration["AWS_SECRET_ACCESS_KEY"];
-                options.TableName = builder.Configuration["GrainTableName"];
-                options.TimeToLive = TimeSpan.FromDays(5);
-                options.Service = builder.Configuration["AWS_REGION"];
-                options.CreateIfNotExists = false;
-            });
-
-        siloBuilder
-            .ConfigureEndpoints(siloPort: 11111, gatewayPort: 30000)
-            .Configure<ClusterOptions>(options =>
-            {
-                options.ClusterId = builder.Configuration["ORLEANS_CLUSTER_ID"] ?? "dev";
-                options.ServiceId = builder.Configuration["ORLEANS_SERVICE_ID"] ?? "AdventureApp";
-            })
-            .ConfigureLogging(logging => logging.AddConsole());
-
-        if (isDevelopment)
-        {
-            siloBuilder.UseLocalhostClustering();
-        }
-        else
-        {
-            siloBuilder.UseDynamoDBClustering(options =>
-            {
-                options.AccessKey = builder.Configuration["AWS_ACCESS_KEY_ID"];
-                options.SecretKey = builder.Configuration["AWS_SECRET_ACCESS_KEY"];
-                options.TableName = builder.Configuration["ClusterTableName"];
-                options.Service = builder.Configuration["AWS_REGION"];
-                options.CreateIfNotExists = false;
-            });
-        }
-    });
+    builder.ConfigureCluster(isDevelopment);
 
     builder.Services.AddAWSContainerMetadataService();
     builder.Services.AddSerializer(serializerBuilder => serializerBuilder.AddNewtonsoftJsonSerializer(type => type.Namespace.StartsWith("AdventureGrains")));
