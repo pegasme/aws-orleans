@@ -135,6 +135,11 @@ resource "aws_lambda_function" "adventure_api" {
   timeout       = 30
   memory_size   = 256
 
+  vpc_config {
+    subnet_ids = var.public_subnet_ids
+    security_group_ids = [aws_security_group.lambda_sg]
+  }
+
   environment {
     variables = {
       ASPNETCORE_ENVIRONMENT = "Production"
@@ -169,15 +174,8 @@ resource "aws_ecs_service" "adventure-server" {
   cluster         = aws_ecs_cluster.adventure_cluster.id
   launch_type     = "EC2"
 
-  load_balancer {
-    target_group_arn = aws_lb_target_group.adventure_ecs_tg.arn
-    container_name   = local.aws_ecs_container_name
-    container_port   = 80
-  }
-
   depends_on = [
-    aws_autoscaling_group.adventure_server_ecs_asg,
-    aws_lb_listener.adventure_ecs_listener
+    aws_autoscaling_group.adventure_server_ecs_asg
   ]
 
   tags = {
@@ -304,36 +302,6 @@ resource "aws_iam_role_policy_attachment" "ecs_attach_orleans_dynamodb" {
 }
 
 # ------------------------------------------------
-# Load balancer 
-# ------------------------------------------------
-
-resource "aws_lb" "adventure_ecs_lb" {
-  name               = "adventure-ecs-lb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb_sg.id]
-  subnets            = var.public_subnet_ids
-}
-
-resource "aws_lb_target_group" "adventure_ecs_tg" {
-  name     = "adventure-ecs-tg"
-  port     = 80
-  protocol = "HTTP"
-  vpc_id   = var.vpc_id
-}
-
-resource "aws_lb_listener" "adventure_ecs_listener" {
-  load_balancer_arn = aws_lb.adventure_ecs_lb.arn
-  port              = 80
-  protocol          = "HTTP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.adventure_ecs_tg.arn
-  }
-}
-
-# ------------------------------------------------
 # ECS TASK DEFINITIONs
 # ------------------------------------------------
 
@@ -411,7 +379,7 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
 
 resource "aws_autoscaling_group" "adventure_server_ecs_asg" {
   name                = "${local.aws_ecs_service_name}-asg"
-  vpc_zone_identifier = var.private_subnet_ids
+  vpc_zone_identifier = var.public_subnet_ids
   desired_capacity    = 1
   max_size            = 2
   min_size            = 1
@@ -441,7 +409,7 @@ resource "aws_launch_template" "adventure_server_ecs_lt" {
   network_interfaces {
     associate_public_ip_address = false
     security_groups             = [aws_security_group.ecs_instances_sg.id]
-    subnet_id                   = var.private_subnet_ids[0]
+    subnet_id                   = var.public_subnet_ids[0]
   }
 
   tag_specifications {
@@ -506,23 +474,10 @@ resource "aws_security_group" "lambda_sg" {
 
   # --- Outbound Rules ---
   egress {
-    description = "Allow HTTP to ALB"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    security_groups = [
-      aws_security_group.alb_sg.id
-    ]
-  }
-
-  egress {
-    description = "Allow HTTPS to ALB"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    security_groups = [
-      aws_security_group.alb_sg.id
-    ]
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
@@ -531,14 +486,6 @@ resource "aws_security_group" "ecs_instances_sg" {
   description = "Security group for ECS EC2 instances"
   vpc_id      = var.vpc_id
 
-  # --- Inbound Rules ---
-  ingress {
-    description     = "Allow traffic from ALB only"
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb_sg.id]
-  }
 
   # --- Outbound Rules ---
   egress {
@@ -551,47 +498,5 @@ resource "aws_security_group" "ecs_instances_sg" {
 
   tags = {
     name = local.server_tag_name
-  }
-}
-
-resource "aws_security_group" "alb_sg" {
-  name        = "adventure-server-alb-sg"
-  description = "Security group for ALB"
-  vpc_id      = var.vpc_id
-
-  # --- Inbound Rules ---
-  ingress {
-    description = "Allow HTTP from Internet"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "Allow Orleans from Internet Gateway"
-    from_port   = 5000 
-    to_port     = 5000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "Allow Orleans from Internet"
-    from_port   = 30000 
-    to_port     = 30000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "adventure-alb-sg"
   }
 }
