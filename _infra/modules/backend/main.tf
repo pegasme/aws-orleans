@@ -112,7 +112,7 @@ resource "aws_ecs_service" "client" {
 
   load_balancer {
     target_group_arn = aws_lb_target_group.client_alb_tg.arn
-    container_name   = "api"
+    container_name   = "${local.aws_ecs_container_name}-client"
     container_port   = 80
   }
 }
