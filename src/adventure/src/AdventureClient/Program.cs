@@ -1,3 +1,4 @@
+using Amazon.DynamoDBv2;
 using AdventureClient.Services.Interfaces;
 using AdventureClient.Services.Services;
 using AdventureGrainInterfaces;
@@ -43,7 +44,7 @@ try
                     options.ServiceId = orleansServiceId;
                 });
 
-        if (isDevelopment)
+        if (false)
         {
             clientBuilder.UseLocalhostClustering(30000);
         }
