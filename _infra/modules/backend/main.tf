@@ -107,19 +107,27 @@ resource "aws_iam_policy" "adventure_api_services_policy" {
     Statement = [
       {
         Effect = "Allow",
+        Name   = "DynamoDBPermissions",
         Action = [
           "dynamodb:GetItem",
           "dynamodb:Scan",
           "dynamodb:Query",
           "dynamodb:DescribeTable",
-          "dynamodb:DescribeTimeToLive",
-          "ec2:CreateNetworkInterface",
-          "ec2:DescribeNetworkInterfaces",
-          "ec2:DeleteNetworkInterface"
+          "dynamodb:DescribeTimeToLive"
         ],
         Resource = [
           var.dynamodb_table_arn
         ]
+      },
+      {
+        Name = "EC2NetworkInterfacePermissions",
+        Effect = "Allow",
+        Action = [
+          "ec2:CreateNetworkInterface",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DeleteNetworkInterface"
+        ],
+        Resource = ["arn:aws:ec2:${var.region}:${data.aws_caller_identity.current.account_id}:network-interface/*"]
       }
     ]
   })
