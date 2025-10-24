@@ -359,8 +359,9 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
     essential = true
     memory    = 512
     portMappings = [
-      { "containerPort" : 11111, "hostPort" : 11111 },
-      { "containerPort" : 30000, "hostPort" : 30000 }
+      { "containerPort" : 11111, "hostPort" : 11111, "protocol": "tcp" },
+      { "containerPort" : 30000, "hostPort" : 30000, "protocol": "tcp" },
+      { "containerPort": 8080, "hostPort": 8080, "protocol": "tcp" }
     ],
     logConfiguration = {
       logDriver = "awslogs"
@@ -377,6 +378,8 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
       { "name" : "ASPNETCORE_ENVIRONMENT", "value" : "Production" },
       { "name" : "ORLEANS_CLUSTER_ID", "value" : "ecs-orleans-cluster" },
       { "name" : "ORLEANS_SERVICE_ID", "value" : "ecs-orleans-service" },
+      { "name": "ORLEANS_SILO_PORT", "value": "11111" },
+      { "name": "ORLEANS_GATEWAY_PORT", "value": "30000" },
       { "name" : "AWS_REGION", "value" : "us-east-1" }
     ]
   }])
@@ -480,14 +483,6 @@ resource "aws_security_group" "lambda_sg" {
 
   # --- Inbound Rules ---
   # Lambda doesn’t need inbound — it’s invoked by API Gateway
-
-  # --- Outbound Rules ---
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 }
 
 resource "aws_security_group" "ecs_instances_sg" {
@@ -495,6 +490,13 @@ resource "aws_security_group" "ecs_instances_sg" {
   description = "Security group for ECS EC2 instances"
   vpc_id      = var.vpc_id
 
+  ingress {
+    description = "Orleans silo-to-silo"
+    from_port   = 11111
+    to_port     = 11111
+    protocol    = "tcp"
+    self        = true
+  }
 
   # --- Outbound Rules ---
   egress {
@@ -508,4 +510,22 @@ resource "aws_security_group" "ecs_instances_sg" {
   tags = {
     name = local.server_tag_name
   }
+}
+
+resource "aws_security_group_rule" "lambda_to_ecs" {
+  type              = "egress"
+  security_group_id = aws_security_group.lambda_sg.id
+  source_security_group_id   = aws_security_group.ecs_instances_sg.id
+  from_port        = 30000
+  to_port          = 30000
+  protocol         = "tcp"
+}
+
+resource "aws_security_group_rule" "ecs_to_lambda" {
+  type              = "ingress"
+  security_group_id = aws_security_group.ecs_instances_sg.id
+  source_security_group_id = aws_security_group.lambda_sg.id
+  from_port        = 30000
+  to_port          = 30000
+  protocol         = "tcp"
 }
