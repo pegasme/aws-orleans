@@ -34,13 +34,23 @@ variable "private_subnet_ids" {
   description = "List of private subnet IDs"
 }
 
-variable "dynamodb_table_arn" {
+variable "dynamodb_cluster_table_arn" {
+  type        = string
+  description = "DynamoDB Table ARN for general storage"
+}
+
+variable "dynamodb_table_grain_arn" {
+  type        = string
+  description = "DynamoDB Table ARN for grain storage"
+}
+
+variable "dynamodb_cluster_table_name" {
   type        = string
   description = "DynamoDB Table ARN for general storage"
 }
 
 
-variable "dynamodb_table_grain_arn" {
+variable "dynamodb_grain_table_name" {
   type        = string
-  description = "DynamoDB Table ARN for grain storage"
+  description = "DynamoDB Table name for grain storage"
 }

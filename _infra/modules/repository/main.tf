@@ -61,12 +61,12 @@ resource "aws_ecr_lifecycle_policy" "repo_lifecycle_policy" {
     "rules": [
         {
             "rulePriority": 1,
-            "description": "Expire images older than 14 days",
+            "description": "Expire images older than 3 days",
             "selection": {
                 "tagStatus": "untagged",
                 "countType": "sinceImagePushed",
                 "countUnit": "days",
-                "countNumber": 14
+                "countNumber": 3
             },
             "action": {
                 "type": "expire"
