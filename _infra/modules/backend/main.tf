@@ -112,7 +112,10 @@ resource "aws_iam_policy" "adventure_api_services_policy" {
           "dynamodb:Scan",
           "dynamodb:Query",
           "dynamodb:DescribeTable",
-          "dynamodb:DescribeTimeToLive"
+          "dynamodb:DescribeTimeToLive",
+          "ec2:CreateNetworkInterface",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DeleteNetworkInterface"
         ],
         Resource = [
           var.dynamodb_table_arn
