@@ -132,8 +132,8 @@ resource "aws_ecs_task_definition" "adventure_client_task_definition" {
     essential = true
     portMappings = [{ containerPort = 80, hostPort = 80 }]
 
-    cpu               = var.api_cpu
-    memory            = var.api_memory
+    cpu       = 10
+    memory    = 512
   
     logConfiguration = {
       logDriver = "awslogs"
@@ -198,8 +198,8 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
     name      = local.aws_ecs_container_name
     image     = var.default_server_image_url
 
-    cpu               = var.orleans_cpu
-    memory            = var.orleans_memory
+    cpu       = 10
+    memory    = 512
 
     essential = true
     portMappings = [
