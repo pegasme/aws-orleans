@@ -122,7 +122,7 @@ resource "aws_ecs_task_definition" "adventure_client_task_definition" {
   network_mode       = "awsvpc"
   execution_role_arn = aws_iam_role.ecs_execution_role.arn
   task_role_arn      = aws_iam_role.ecs_client_task_role.arn
-  
+
   requires_compatibilities = ["FARGATE"]
   depends_on               = [aws_cloudwatch_log_group.api]
 
@@ -131,6 +131,10 @@ resource "aws_ecs_task_definition" "adventure_client_task_definition" {
     image     = var.default_client_image_url
     essential = true
     portMappings = [{ containerPort = 80, hostPort = 80 }]
+
+    cpu               = var.api_cpu
+    memory            = var.api_memory
+  
     logConfiguration = {
       logDriver = "awslogs"
       options = {
@@ -193,6 +197,10 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
   container_definitions = jsonencode([{
     name      = local.aws_ecs_container_name
     image     = var.default_server_image_url
+
+    cpu               = var.orleans_cpu
+    memory            = var.orleans_memory
+
     essential = true
     portMappings = [
       { "containerPort" : 11111, "hostPort" : 11111, "protocol": "tcp" },
