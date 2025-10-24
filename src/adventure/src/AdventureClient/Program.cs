@@ -44,7 +44,7 @@ try
                     options.ServiceId = orleansServiceId;
                 });
 
-        if (false)
+        if (isDevelopment)
         {
             clientBuilder.UseLocalhostClustering(30000);
         }
