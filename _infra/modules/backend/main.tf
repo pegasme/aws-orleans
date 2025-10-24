@@ -126,7 +126,7 @@ resource "aws_ecs_task_definition" "adventure_client_task_definition" {
   requires_compatibilities = ["FARGATE"]
   depends_on               = [aws_cloudwatch_log_group.api]
 
-  cpu       = 10
+  cpu       = 256
   memory    = 512
 
   container_definitions = jsonencode([{
@@ -134,7 +134,7 @@ resource "aws_ecs_task_definition" "adventure_client_task_definition" {
     image     = var.default_client_image_url
     essential = true
     portMappings = [{ containerPort = 80, hostPort = 80 }]
-    
+
     logConfiguration = {
       logDriver = "awslogs"
       options = {
@@ -191,7 +191,7 @@ resource "aws_ecs_task_definition" "adventure_server_task_definition" {
   execution_role_arn = aws_iam_role.ecs_execution_role.arn
   task_role_arn      = aws_iam_role.adventure_ecs_task_role.arn
 
-  cpu       = 10
+  cpu       = 256 #(.25 vCPU)
   memory    = 512
   
   requires_compatibilities = ["FARGATE"]
