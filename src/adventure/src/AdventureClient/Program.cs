@@ -53,7 +53,7 @@ try
         {
             clientBuilder.UseDynamoDBClustering(options =>
             {
-                options.TableName = builder.Configuration["ClusterTableName"];
+                options.TableName = builder.Configuration["CLUSTER_TABLE_NAME"];
                 options.Service = builder.Configuration["AWS_REGION"];
                 options.CreateIfNotExists = false;
             });
@@ -88,79 +88,6 @@ finally
     Log.CloseAndFlush();
 }
 
-/*try
-{
-    var hostBuilder = Host.CreateDefaultBuilder(args);
-
-    hostBuilder.ConfigureWebHostDefaults(webBuilder =>
-        {
-            webBuilder.ConfigureKestrel(options =>
-            {
-                options.ListenLocalhost(5000);
-            });
-
-            webBuilder.ConfigureServices(services =>
-            {
-                services.AddControllers();
-                services.AddEndpointsApiExplorer();
-                services.AddSwaggerGen();
-
-                // Add CORS services here
-                services.AddCors(options =>
-                {
-                    options.AddPolicy("AllowSpecificOrigin",
-                        builder =>
-                        {
-                            builder.WithOrigins("https://localhost:7013") // Adjust this as necessary
-                                   .AllowAnyHeader()
-                                   .AllowAnyMethod();
-                        });
-                });
-            });
-
-            webBuilder.Configure((context, app) =>
-            {
-                if (context.HostingEnvironment.IsDevelopment())
-                {
-                    app.UseDeveloperExceptionPage();
-                    app.UseSwagger();
-                    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1"));
-                }
-
-                app.UseRouting();
-
-                // Apply CORS policy here
-                //app.UseCors("AllowSpecificOrigin");
-
-                //app.UseAuthorization();
-                app.UseEndpoints(endpoints =>
-                {
-                    endpoints.MapControllers();
-                });
-            });
-        });
-
-    hostBuilder.UseOrleansClient(clientBuilder =>
-{
-clientBuilder.UseLocalhostClustering(30000);
-});
-
-    using var app = hostBuilder.Build();
-
-    // Start the host
-    await app.RunAsync();
-
-    Log.Information("Stopped cleanly");
-}
-catch (Exception ex)
-{
-    Log.Fatal(ex, "An unhandled exception occurred during bootstrapping");
-}
-finally
-{
-    Log.CloseAndFlush();
-}
-*/
 
 // var client = host.Services.GetRequiredService<IClusterClient>();
 // var player = client.GetGrain<IPlayerGrain>(Guid.NewGuid());

@@ -279,8 +279,9 @@ resource "aws_iam_policy" "ecs_ecr_policy" {
           "ecr:GetRepositoryPolicy",
           "ecr:PullImage",
           "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer"
         ],
-        Resource = [ "*"]
+        Resource = ["*"]
       }
     ]
   })
@@ -362,7 +363,6 @@ resource "aws_iam_role_policy_attachment" "adventure_ecs_client_attach_cloudwatc
   role       = aws_iam_role.ecs_client_task_role.name
   policy_arn = aws_iam_policy.adventure_ecs_cloudwatch_policy.arn
 }
-
 
 ## dynamo policies
 

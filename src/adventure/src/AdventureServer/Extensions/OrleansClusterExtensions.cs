@@ -14,7 +14,7 @@ public static class OrleansClusterExtensions
         {
             siloBuilder.AddDynamoDBGrainStorageAsDefault(options =>
                 {
-                    options.TableName = builder.Configuration["GrainTableName"];
+                    options.TableName = builder.Configuration["GRAIN_TABLE_NAME"];
                     options.TimeToLive = TimeSpan.FromDays(5);
                     options.Service = builder.Configuration["AWS_REGION"];
                     options.CreateIfNotExists = false;
@@ -23,13 +23,13 @@ public static class OrleansClusterExtensions
                 siloBuilder
                     .Configure<EndpointOptions>(options =>
                     {
-                        var awsContainerMetadataService= builder.Services.BuildServiceProvider().GetRequiredService<IAWSContainerMetadata>();
+                        /*var awsContainerMetadataService= builder.Services.BuildServiceProvider().GetRequiredService<IAWSContainerMetadata>();
 
                         var awsContainerMetadata = awsContainerMetadataService.GetContainerMetadata();
                         var siloPort = awsContainerMetadata?.Ports?.FirstOrDefault(p => p.ContainerPort == EndpointOptions.DEFAULT_SILO_PORT)?.HostPort ?? EndpointOptions.DEFAULT_SILO_PORT;
                         var gatewayPort = awsContainerMetadata?.Ports?.FirstOrDefault(p => p.ContainerPort == EndpointOptions.DEFAULT_GATEWAY_PORT)?.HostPort ?? EndpointOptions.DEFAULT_GATEWAY_PORT;
                         var advertisedIPAddress = awsContainerMetadataService.GetHostPrivateIPv4Address() ?? Dns.GetHostAddresses(Dns.GetHostName()).First();
-                
+                */
                         options.SiloPort = 11111;
                         options.GatewayPort = 30000;
                         options.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Any, EndpointOptions.DEFAULT_GATEWAY_PORT);
@@ -50,7 +50,7 @@ public static class OrleansClusterExtensions
                 {
                     siloBuilder.UseDynamoDBClustering(options =>
                     {
-                        options.TableName = builder.Configuration["ClusterTableName"];
+                        options.TableName = builder.Configuration["CLUSTER_TABLE_NAME"];
                         options.Service = builder.Configuration["AWS_REGION"];
                         options.CreateIfNotExists = false;
                     });
