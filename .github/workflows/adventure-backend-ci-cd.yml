@@ -14,8 +14,10 @@ on:
 env:
   AWS_REGION: us-east-1
   IMAGE_TAG: latest
-  ECS_TASK_DEFINITION: adventure-server-task-definition
-  ECS_SERVICE: adventure-ecs-service
+  ECS_SERVER_TASK_DEFINITION: adventure-server-task-definition
+  ECS_CLIENT_TASK_DEFINITION: adventure-client-task-definition
+  ECS_SERVER_SERVICE: adventure-client-service
+  ECS_CLIENT_SERVICE: adventure-ecs-service
   ECS_CLUSTER: adventure-ecs-cluster
   CONTAINER_NAME: adventure-server-container
 
@@ -82,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: push_client
     environment: default
-    name: Update Client Lambda Function
+    name: Update Client
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
@@ -92,11 +94,28 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
       
-      - name: Update Lambda function to use new image
+      - name: Download current task definition
         run: |
-          aws lambda update-function-code \
-            --function-name ${{ vars.CLIENT_LAMBDA_FUNCTION_NAME }} \
-            --image-uri ${{ needs.push_client.outputs.image_uri }}
+          aws ecs describe-task-definition \
+          --task-definition $ECS_CLIENT_TASK_DEFINITION \
+          --query taskDefinition > task-definition.json
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ needs.push_client.outputs.image_uri }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        timeout-minutes: 15
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_CLIENT_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
 
   push_server:
       runs-on: ubuntu-latest
@@ -147,7 +166,7 @@ jobs:
       - name: Download current task definition
         run: |
           aws ecs describe-task-definition \
-          --task-definition $ECS_TASK_DEFINITION \
+          --task-definition $ECS_SERVER_TASK_DEFINITION \
           --query taskDefinition > task-definition.json
 
       - name: Fill in the new image ID in the Amazon ECS task definition
@@ -163,7 +182,7 @@ jobs:
         timeout-minutes: 15
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
+          service: ${{ env.ECS_SERVER_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
       

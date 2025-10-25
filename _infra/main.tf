@@ -38,4 +38,5 @@ module "backend" {
   dynamodb_cluster_table_arn = module.dynamodb.cluster_table_arn
   dynamodb_cluster_table_name = module.dynamodb.cluster_table_name
   dynamodb_grain_table_name = module.dynamodb.grain_table_name
+  repo_arn = module.repository.ecr_role_arn
 }

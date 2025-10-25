@@ -53,3 +53,8 @@ variable "dynamodb_grain_table_name" {
   type        = string
   description = "DynamoDB Table name for grain storage"
 }
+
+variable "repo_arn" {
+  type        = string
+  description = "ECR Role ARN"
+}

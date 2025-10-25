@@ -7,17 +7,9 @@ terraform {
       version = "~> 4.0"
     }
   }
-
-  cloud {
-    hostname     = "app.terraform.io"
-    organization = "PegasTest"
-
-    workspaces {
-      name = "aws-orleans"
-    }
-  }
 }
 
 provider "aws" {
-  region = "us-east-1"
+  region  = "us-east-1"
+  profile = "terraform"
 }

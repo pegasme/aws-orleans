@@ -9,11 +9,12 @@ data "aws_availability_zones" "available" {}
 locals {
   api_gateway_name = "${var.name}-api-gateway"
 
-  aws_ecs_service_name   = "${var.name}-ecs-service"
-  aws_ecs_cluster_name   = "${var.name}-ecs-cluster"
-  aws_task_def_name      = "${var.name}-server-task-definition"
-  aws_ecs_keyapir        = "${var.name}-ecs-keypair" // Created manually
-  aws_ecs_container_name = "${var.name}-server-container"
+  aws_ecs_service_name     = "${var.name}-ecs-service"
+  aws_ecs_cluster_name     = "${var.name}-ecs-cluster"
+  aws_server_task_def_name = "${var.name}-server-task-definition"
+  aws_client_task_def_name = "${var.name}-client-task-definition"
+  aws_ecs_keyapir          = "${var.name}-ecs-keypair" // Created manually
+  aws_ecs_container_name   = "${var.name}-server-container"
 
   account_id = data.aws_caller_identity.current.account_id
 
@@ -63,6 +64,7 @@ resource "aws_security_group" "ecs" {
 
 resource "aws_cloudwatch_log_group" "api" {
   name = "/ecs/${var.name}-api"
+  retention_in_days = 3
 }
 
 resource "aws_lb" "client_alb" {
@@ -73,11 +75,25 @@ resource "aws_lb" "client_alb" {
 }
 
 resource "aws_lb_target_group" "client_alb_tg" {
-  name     = "${var.name}-client-tg"
-  port     = 80
-  protocol = "HTTP"
-  vpc_id   = var.vpc_id
+  name        = "${var.name}-client-tg"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
   health_check { path = "/health" }
+
+  depends_on = [ aws_lb.client_alb ]
+}
+
+resource "aws_lb_listener" "client_alb_listener" {
+  load_balancer_arn = aws_lb.client_alb.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.client_alb_tg.arn
+  }
 }
 
 resource "aws_security_group" "alb" {
@@ -118,7 +134,7 @@ resource "aws_ecs_service" "client" {
 }
 
 resource "aws_ecs_task_definition" "adventure_client_task_definition" {
-  family             = local.aws_task_def_name
+  family             = local.aws_client_task_def_name
   network_mode       = "awsvpc"
   execution_role_arn = aws_iam_role.ecs_execution_role.arn
   task_role_arn      = aws_iam_role.ecs_client_task_role.arn
@@ -186,7 +202,7 @@ resource "aws_ecs_service" "adventure-server" {
 }
 
 resource "aws_ecs_task_definition" "adventure_server_task_definition" {
-  family             = local.aws_task_def_name
+  family             = local.aws_server_task_def_name
   network_mode       = "awsvpc"
   execution_role_arn = aws_iam_role.ecs_execution_role.arn
   task_role_arn      = aws_iam_role.adventure_ecs_task_role.arn
@@ -249,15 +265,61 @@ data "aws_iam_policy_document" "ecs_assume" {
   }
 }
 
+resource "aws_iam_policy" "ecs_ecr_policy" {
+  name        = "ecs-orleans-ecr-access"
+  description = "Allow ECS (Orleans) to use ECR repository"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:GetRepositoryPolicy",
+          "ecr:PullImage",
+          "ecr:BatchGetImage",
+        ],
+        Resource = [ "*"]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_exec_attach_ecr" {
+  role       = aws_iam_role.ecs_execution_role.name
+  policy_arn = aws_iam_policy.ecs_ecr_policy.arn
+}
+
+resource "aws_iam_policy" "ecs_exec_cloudwatch_policy" {
+  name        = "ecs-access-cloudwatch"
+  description = "Allow ECS (Orleans) to use CloudWatch"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+        ],
+        Resource = [ "*"]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_exec_attach_cloudwatch" {
+  role       = aws_iam_role.ecs_execution_role.name
+  policy_arn = aws_iam_policy.ecs_exec_cloudwatch_policy.arn
+}
+
 // run server task role
 resource "aws_iam_role" "adventure_ecs_task_role" {
   name               = "${var.name}-ecs-task-role"
   assume_role_policy = data.aws_iam_policy_document.ecs_assume.json
-}
-
-resource "aws_iam_role_policy_attachment" "dynamo_clientcluster_policy_attach" {
-  role       = aws_iam_role.adventure_ecs_task_role.name
-  policy_arn = aws_iam_policy.ecs_orleans_dynamodb_cluster_policy.arn
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_exec_attach_server" {
@@ -270,9 +332,19 @@ resource "aws_iam_role_policy_attachment" "dynamo_server_grain_policyattach" {
   policy_arn = aws_iam_policy.ecs_orleans_dynamodb_grain_policy.arn
 }
 
+resource "aws_iam_role_policy_attachment" "dynamo_server_cluster_policy_attach" {
+  role       = aws_iam_role.adventure_ecs_task_role.name
+  policy_arn = aws_iam_policy.ecs_orleans_dynamodb_cluster_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "adventure_ecs_server_attach_cloudwatch" {
+  role       = aws_iam_role.ecs_client_task_role.name
+  policy_arn = aws_iam_policy.adventure_ecs_cloudwatch_policy.arn
+}
+
 // run client task role
 resource "aws_iam_role" "ecs_client_task_role" {
-  name               = "${var.name}-ecs-client-taskrole"
+  name               = "${var.name}-ecs-client-task-role"
   assume_role_policy = data.aws_iam_policy_document.ecs_assume.json
 }
 
@@ -281,10 +353,16 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_attach_client" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-resource "aws_iam_role_policy_attachment" "dynamo_server_cluster_policy_attach" {
+resource "aws_iam_role_policy_attachment" "dynamo_client_cluster_policy_attach" {
   role       = aws_iam_role.ecs_client_task_role.name
   policy_arn = aws_iam_policy.ecs_orleans_dynamodb_cluster_policy.arn
 }
+
+resource "aws_iam_role_policy_attachment" "adventure_ecs_client_attach_cloudwatch" {
+  role       = aws_iam_role.ecs_client_task_role.name
+  policy_arn = aws_iam_policy.adventure_ecs_cloudwatch_policy.arn
+}
+
 
 ## dynamo policies
 
@@ -339,6 +417,40 @@ resource "aws_iam_policy" "ecs_orleans_dynamodb_grain_policy" {
         Resource = [
           var.dynamodb_table_grain_arn
         ]
+      }
+    ]
+  })
+}
+
+# Cloudwatch policies
+resource "aws_iam_policy" "adventure_ecs_cloudwatch_policy" {
+  name        = "ecs-cloudwatch-access"
+  description = "Allow ECS instances and tasks to write logs and metrics to CloudWatch"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          # CloudWatch Logs
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams",
+          "logs:DescribeLogGroups",
+
+          # CloudWatch Metrics
+          "cloudwatch:PutMetricData",
+          "cloudwatch:GetMetricData",
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics",
+
+          # ECS container insights (optional)
+          "ec2:DescribeTags",
+          "ec2:DescribeInstances"
+        ],
+        Resource = "*"
       }
     ]
   })
