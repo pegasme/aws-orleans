@@ -105,7 +105,7 @@ jobs:
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: task-definition.json
-          container-name: ${{ env.CONTAINER_NAME }}
+          container-name: "adventure-server-container-client"
           image: ${{ needs.push_client.outputs.image_uri }}
 
       - name: Deploy Amazon ECS task definition
