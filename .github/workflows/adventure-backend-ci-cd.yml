@@ -16,8 +16,8 @@ env:
   IMAGE_TAG: latest
   ECS_SERVER_TASK_DEFINITION: adventure-server-task-definition
   ECS_CLIENT_TASK_DEFINITION: adventure-client-task-definition
-  ECS_SERVER_SERVICE: adventure-client-service
-  ECS_CLIENT_SERVICE: adventure-ecs-service
+  ECS_CLIENT_SERVICE: adventure-client-service
+  ECS_SERVER_SERVICE: adventure-ecs-service
   ECS_CLUSTER: adventure-ecs-cluster
   CONTAINER_NAME: adventure-server-container
 
