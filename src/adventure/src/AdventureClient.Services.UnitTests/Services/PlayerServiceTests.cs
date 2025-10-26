@@ -1,5 +1,6 @@
 ﻿using AdventureClient.Services.Models;
 using AdventureClient.Services.Services;
+using AdventureClient.Services.Interfaces;
 using Moq;
 
 namespace AdventureClient.Services.UnitTests;
@@ -11,7 +12,9 @@ public class PlayerServiceTests
     {
         // Arrange
         var mockGrains = new Mock<IGrainFactory>();
-        var playerService = new PlayerService(mockGrains.Object);
+        var mockAuthService = new Mock<IAuthorizationService>();
+        var playerService = new PlayerService(mockGrains.Object, mockAuthService.Object);
+        
         var newPlayer = new CreatePlayerDto
         {
             Name = "TestPlayer"
