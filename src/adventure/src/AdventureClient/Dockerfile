@@ -20,4 +20,4 @@ WORKDIR /var/task
 COPY --from=publish /app/publish .
 
 # Run the application
-CMD ["AdventureClient"]
+ENTRYPOINT ["dotnet", "AdventureClient.dll"]

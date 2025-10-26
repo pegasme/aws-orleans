@@ -4,7 +4,7 @@ using Orleans.Configuration;
 using Orleans.Hosting;
 using Serilog;
 
-namespace AdventureServer.Extensions;
+namespace AdventureServer.Cluster;
 
 public static class OrleansClusterExtensions
 {
@@ -23,13 +23,6 @@ public static class OrleansClusterExtensions
                 siloBuilder
                     .Configure<EndpointOptions>(options =>
                     {
-                        /*var awsContainerMetadataService= builder.Services.BuildServiceProvider().GetRequiredService<IAWSContainerMetadata>();
-
-                        var awsContainerMetadata = awsContainerMetadataService.GetContainerMetadata();
-                        var siloPort = awsContainerMetadata?.Ports?.FirstOrDefault(p => p.ContainerPort == EndpointOptions.DEFAULT_SILO_PORT)?.HostPort ?? EndpointOptions.DEFAULT_SILO_PORT;
-                        var gatewayPort = awsContainerMetadata?.Ports?.FirstOrDefault(p => p.ContainerPort == EndpointOptions.DEFAULT_GATEWAY_PORT)?.HostPort ?? EndpointOptions.DEFAULT_GATEWAY_PORT;
-                        var advertisedIPAddress = awsContainerMetadataService.GetHostPrivateIPv4Address() ?? Dns.GetHostAddresses(Dns.GetHostName()).First();
-                */
                         options.SiloPort = 11111;
                         options.GatewayPort = 30000;
                         options.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Any, EndpointOptions.DEFAULT_GATEWAY_PORT);
@@ -55,6 +48,8 @@ public static class OrleansClusterExtensions
                         options.CreateIfNotExists = false;
                     });
                 }
+
+                siloBuilder.AddStartupTask<AdventureGameStartupTask>();
             });
         return builder;
     }

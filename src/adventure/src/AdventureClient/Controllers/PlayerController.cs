@@ -4,29 +4,34 @@ using AdventureGrainInterfaces;
 using Microsoft.AspNetCore.Mvc;
 using AdventureClient.Services.Models;
 using AdventureClient.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AdventureClient.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class PlayerController : ControllerBase
     {
         private readonly IPlayerService _playerService;
 
-        public PlayerController(IPlayerService playerService) => _playerService = playerService;
-
-        // TODO check that player does not exists
-        [HttpPost("create")]
-        public async Task<IActionResult> CreatePlayer([FromBody]CreatePlayerDto player)
+        public PlayerController(IPlayerService playerService) 
         {
-            var newPlayer = await _playerService.CreatePlayer(player);
+            _playerService = playerService;
+        }
+
+        [HttpPost("create")]
+        [AllowAnonymous]
+        public async Task<IActionResult> CreatePlayerAsync([FromBody]CreatePlayerDto player)
+        {
+            var newPlayer = await _playerService.CreatePlayerAsync(player);
             return Ok(newPlayer);
         }
 
-        [HttpGet("{playerId}")]
-        public async Task<IActionResult> GetPlayer(Guid playerId)
-        { 
-            var player = await _playerService.GetPlayer(playerId);
+        [HttpGet("get/{playerId}")]
+        public async Task<IActionResult> GetPlayerAsync(Guid playerId)
+        {
+            var player = await _playerService.GetPlayerAsync(playerId);
 
             if (player == null)
             {
@@ -34,6 +39,19 @@ namespace AdventureClient.Controllers
             }
 
             return Ok(player);
+        }
+        
+        [HttpGet("inventory/{playerId}")]
+        public async Task<IActionResult> GetPlayerInventoryAsync(Guid playerId)
+        { 
+            var inventory = await _playerService.GetPlayerInventoryAsync(playerId);
+
+            if (inventory == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(inventory);
         }
     }
 }

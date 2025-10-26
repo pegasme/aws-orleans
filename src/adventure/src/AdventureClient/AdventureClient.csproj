@@ -3,6 +3,7 @@
     <PackageReference Include="Amazon.Lambda.AspNetCoreServer" />
     <PackageReference Include="Amazon.Lambda.AspNetCoreServer.Hosting" />
     <PackageReference Include="AWSSDK.DynamoDBv2" />
+    <PackageReference Include="Microsoft.AspNetCore.Authorization" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />

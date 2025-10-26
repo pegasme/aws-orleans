@@ -10,10 +10,9 @@ using Serilog.Events;
 using Serilog.Formatting.Compact;
 using AdventureGrainInterfaces;
 using AdventureGrains;
-using AWSECS.ContainerMetadata.Extensions;
+using AdventureServer;
+using AdventureServer.Cluster;
 using Microsoft.CodeAnalysis.Options;
-using AWSECS.ContainerMetadata.Contracts;
-using AdventureServer.Extensions;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -35,7 +34,6 @@ try
 
     builder.ConfigureCluster(isDevelopment);
 
-    builder.Services.AddAWSContainerMetadataService();
     builder.Services.AddSerializer(serializerBuilder => serializerBuilder.AddNewtonsoftJsonSerializer(type => type.Namespace.StartsWith("AdventureGrains")));
 
     var app = builder.Build();

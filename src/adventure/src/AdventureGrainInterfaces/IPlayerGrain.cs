@@ -20,4 +20,6 @@ public interface IPlayerGrain : IGrainWithGuidKey
 
     // A Player takes his turn by calling Play with a command
     Task<string?> Play(string command);
+
+    Task<List<Thing>> GetInventoryAsync();
 }

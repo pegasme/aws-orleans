@@ -85,6 +85,11 @@ public class PlayerGrain(
         return "I don't understand.";
     }
 
+    public async Task<List<Thing>> GetInventoryAsync()
+    {
+        return _things;
+    }
+
     async Task IPlayerGrain.SetName(string name)
     {
         _myInfo = _myInfo with { Name = name };
@@ -187,19 +192,6 @@ public class PlayerGrain(
         return $"I can't see {target} here. Are you sure?";
     }
 
-    private string RemoveStopWords(string s)
-    {
-        var stopwords = new[] { " on ", " the ", " a " };
-
-        StringBuilder builder = new(s);
-        foreach (var word in stopwords)
-        {
-            builder.Replace(word, " ");
-        }
-
-        return builder.ToString();
-    }
-
     private Thing? FindMyThing(string name) =>
         _things.FirstOrDefault(x => x.Name == name);
 
@@ -217,8 +209,6 @@ public class PlayerGrain(
 
     async Task<string?> IPlayerGrain.Play(string command)
     {
-        command = RemoveStopWords(command);
-
         string[] words = command.Split(' ');
         string verb = words[0].ToLower();
 

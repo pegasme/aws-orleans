@@ -1,7 +1,7 @@
 using AdventureGrainInterfaces;
 using Newtonsoft.Json;
 
-namespace AdventureSetup;
+namespace AdventureServer.Cluster;
 
 public sealed class AdventureGame
 {

@@ -4,7 +4,9 @@ namespace AdventureClient.Services.Interfaces;
 
 public interface IPlayerService
 {
-    Task<PlayerDto> CreatePlayer(CreatePlayerDto player);
+    Task<CreatePlayerResult> CreatePlayerAsync(CreatePlayerDto player);
+
+    Task<PlayerDto?> GetPlayerAsync(Guid playerId);
     
-    Task<PlayerDto?> GetPlayer(Guid playerId);
+    Task<InventoryDto> GetPlayerInventoryAsync(Guid playerId);
 }

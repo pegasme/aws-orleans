@@ -6,7 +6,12 @@
       "launchBrowser": true,
       "applicationUrl": "http://localhost:7288",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ORLEANS_CLUSTER_ID": "dev",
+        "ORLEANS_SERVICE_ID": "AdventureApp",
+        "AUTHORIZATION_KEY": "AVC123KEY",
+        "CLUSTER_TABLE_NAME": "AdventureClusterStore",
+        "AWS_REGION": "us-east-1"
       }
     }
   }

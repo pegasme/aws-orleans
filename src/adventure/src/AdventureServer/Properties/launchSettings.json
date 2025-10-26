@@ -5,7 +5,12 @@
       "dotnetRunMessages": true,
       "launchBrowser": true,
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "GRAIN_TABLE_NAME": "AdventureGrainStore",
+        "CLUSTER_TABLE_NAME": "AdventureClusterStore",
+        "ORLEANS_CLUSTER_ID": "dev",
+        "ORLEANS_SERVICE_ID": "AdventureApp",
+        "AWS_REGION": "us-east-1"
       }
     }
   }

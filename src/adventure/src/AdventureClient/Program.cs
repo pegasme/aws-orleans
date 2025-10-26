@@ -19,30 +19,39 @@ Log.Information("Starting up!");
 
 bool isDevelopment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
 
+var orleansClusterId = Environment.GetEnvironmentVariable("ORLEANS_CLUSTER_ID") ?? throw new Exception("ORLEANS_CLUSTER_ID configuration is missing");
+Log.Information($"Using Orleans Cluster: {orleansClusterId}"); 
+
+var orleansServiceId = Environment.GetEnvironmentVariable("ORLEANS_SERVICE_ID") ?? throw new Exception("ORLEANS_SERVICE_ID configuration is missing");
+Log.Information($"Using Orleans Service: {orleansServiceId}");
+
 try
 {
     var builder = WebApplication.CreateBuilder(args);
 
     builder.Services.AddHealthChecks();
-    builder.Services.AddControllers();
-    builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
 
+    //builder.Services.AddAuthentication();
+    //builder.Services.AddAuthorization();
+
+    builder.Services.AddControllers();
+    builder.Services.AddEndpointsApiExplorer();
+
+    builder.Services.AddMemoryCache();
+
+    builder.Services.AddSingleton<IPlayerService, PlayerService>();
+    builder.Services.AddSingleton<IAuthorizationService, AuthorizationService>();
     builder.Services.AddSingleton<IPlayerService, PlayerService>();
 
-    var orleansClusterId = builder.Configuration["ORLEANS_CLUSTER_ID"] ?? throw new Exception("ORLEANS_CLUSTER_ID configuration is missing");
-    Log.Information($"Using Orleans Cluster: {orleansClusterId}"); 
-
-    var orleansServiceId = builder.Configuration["ORLEANS_SERVICE_ID"] ?? throw new Exception("ORLEANS_SERVICE_ID configuration is missing");
-    Log.Information($"Using Orleans Service: {orleansServiceId}");
 
     builder.UseOrleansClient(clientBuilder =>
     {
         clientBuilder.Configure<ClusterOptions>(options =>
-                {
-                    options.ClusterId = orleansClusterId;
-                    options.ServiceId = orleansServiceId;
-                });
+        {
+            options.ClusterId = orleansClusterId;
+            options.ServiceId = orleansServiceId;
+        });
 
         if (isDevelopment)
         {
@@ -53,19 +62,21 @@ try
         {
             clientBuilder.UseDynamoDBClustering(options =>
             {
-                options.TableName = builder.Configuration["CLUSTER_TABLE_NAME"];
-                options.Service = builder.Configuration["AWS_REGION"];
+                options.TableName = Environment.GetEnvironmentVariable("CLUSTER_TABLE_NAME") ?? throw new Exception("CLUSTER_TABLE_NAME configuration is missing");
+                options.Service = Environment.GetEnvironmentVariable("AWS_REGION") ?? throw new Exception("AWS_REGION configuration is missing");
                 options.CreateIfNotExists = false;
             });
         }
     });
 
-    builder.Services.AddAWSLambdaHosting(LambdaEventSource.RestApi);
-
     using var app = builder.Build();
 
     app.MapHealthChecks("/health");
     app.MapControllers();
+
+    //app.UseCors();
+    //app.UseAuthentication();
+    //app.UseAuthorization();
 
     // Configure the HTTP request pipeline.
     if (app.Environment.IsDevelopment())
@@ -87,32 +98,3 @@ finally
 {
     Log.CloseAndFlush();
 }
-
-
-// var client = host.Services.GetRequiredService<IClusterClient>();
-// var player = client.GetGrain<IPlayerGrain>(Guid.NewGuid());
-// await player.SetName(name);
-
-// var room1 = client.GetGrain<IRoomGrain>(0);
-// await player.SetRoomGrain(room1);
-
-// Console.WriteLine(await player.Play("look"));
-
-// var result = "Start";
-// try
-// {
-//     while (result is not "")
-//     {
-//         var command = Console.ReadLine()!;
-
-//         result = await player.Play(command);
-//         Console.WriteLine(result);
-//     }
-// }
-// finally
-// {
-//     await player.Die();
-//     Console.WriteLine("Game over!");
-//     await host.StopAsync();
-// }
-
