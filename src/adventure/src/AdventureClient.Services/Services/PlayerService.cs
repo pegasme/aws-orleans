@@ -8,9 +8,9 @@ namespace AdventureClient.Services.Services;
 public class PlayerService : IPlayerService
 {
     private readonly IGrainFactory _grainFactory;
-    private readonly IAuthorizationService _authorizationService;
+    private readonly IGameAuthorizationService _authorizationService;
 
-    public PlayerService(IGrainFactory grainFactory, IAuthorizationService authorizationService) 
+    public PlayerService(IGrainFactory grainFactory, IGameAuthorizationService authorizationService) 
     {
         _grainFactory = grainFactory ?? throw new ArgumentNullException(nameof(grainFactory)); 
         _authorizationService = authorizationService ?? throw new ArgumentNullException(nameof(authorizationService));
@@ -18,9 +18,9 @@ public class PlayerService : IPlayerService
 
     public async Task<CreatePlayerResult> CreatePlayerAsync(CreatePlayerDto player)
     {
-        var authorizedToken = _authorizationService.Authorize(player.Key, player.Name);
-        
         var newId = Guid.NewGuid();
+        var authorizedToken = _authorizationService.Authorize(player.Key, newId);
+        
         var playerGrain = _grainFactory.GetGrain<IPlayerGrain>(newId);
         await playerGrain.SetName(player.Name);
 

@@ -1,8 +1,8 @@
 namespace AdventureClient.Services.Interfaces;
 
-public interface IAuthorizationService
+public interface IGameAuthorizationService
 {
     bool IsAuthorized(string key);
 
-    string Authorize(string key, string name);
+    string Authorize(string key, Guid id);
 }

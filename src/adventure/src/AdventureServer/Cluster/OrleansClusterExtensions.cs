@@ -25,8 +25,6 @@ public static class OrleansClusterExtensions
                     {
                         options.SiloPort = 11111;
                         options.GatewayPort = 30000;
-                        options.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Any, EndpointOptions.DEFAULT_GATEWAY_PORT);
-                        options.SiloListeningEndpoint = new IPEndPoint(IPAddress.Any, EndpointOptions.DEFAULT_SILO_PORT);
                     })
                     .Configure<ClusterOptions>(options =>
                     {

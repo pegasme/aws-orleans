@@ -1,7 +1,10 @@
 using Amazon.DynamoDBv2;
 using AdventureClient.Services.Interfaces;
 using AdventureClient.Services.Services;
+using AdventureClient.Middlewares;
+using AdventureClient.Utilities;
 using AdventureGrainInterfaces;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
@@ -30,10 +33,15 @@ try
     var builder = WebApplication.CreateBuilder(args);
 
     builder.Services.AddHealthChecks();
-    builder.Services.AddSwaggerGen();
+    builder.Services.AddSwaggerGen(c => {
+        c.OperationFilter<HeaderSwaggerAttribute>();
+    });
 
-    //builder.Services.AddAuthentication();
-    //builder.Services.AddAuthorization();
+    builder.Services.AddAuthentication("SessionTokens").AddScheme<AuthenticationSchemeOptions, SessionTokenAuthSchemeHandler>(
+       "SessionTokens",
+       opts => {}
+   );
+    builder.Services.AddAuthorization();
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
@@ -41,7 +49,7 @@ try
     builder.Services.AddMemoryCache();
 
     builder.Services.AddSingleton<IPlayerService, PlayerService>();
-    builder.Services.AddSingleton<IAuthorizationService, AuthorizationService>();
+    builder.Services.AddSingleton<IGameAuthorizationService, GameAuthorizationService>();
     builder.Services.AddSingleton<IPlayerService, PlayerService>();
 
 
@@ -74,9 +82,7 @@ try
     app.MapHealthChecks("/health");
     app.MapControllers();
 
-    //app.UseCors();
-    //app.UseAuthentication();
-    //app.UseAuthorization();
+    app.UseCors();
 
     // Configure the HTTP request pipeline.
     if (app.Environment.IsDevelopment())
@@ -85,6 +91,8 @@ try
         app.UseSwaggerUI();
     }
 
+    app.UseAuthentication();
+    app.UseAuthorization();
     // Start the host
     await app.RunAsync();
 
